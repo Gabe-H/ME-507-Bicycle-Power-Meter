@@ -1,0 +1,7 @@
+description: InvenSense ICM-20948 9-axis IMU
+
+compatible: "invensense,icm20948"
+
+include:
+  - base.yaml
+  - i2c-device.yaml
