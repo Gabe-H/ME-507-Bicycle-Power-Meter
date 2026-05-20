@@ -7,7 +7,8 @@
     pinctrl-0 = <&i2c0_default>;
     pinctrl-1 = <&i2c0_sleep>;
     pinctrl-names = "default", "sleep";
-    clock-frequency = <I2C_BITRATE_FAST>;
+    // clock-frequency = <I2C_BITRATE_FAST>;
+    clock-frequency = <I2C_BITRATE_STANDARD>;
 
     icm20948: icm20948@69 {
         compatible = "invensense,icm20948";
@@ -52,4 +53,20 @@
         drdy-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
         #io-channel-cells = <1>;
     };
+};
+
+&button0 {
+    status = "disabled";
+};
+
+&button1 {
+    status = "disabled";
+};
+
+&button2 {
+    status = "disabled";
+};
+
+&button3 {
+    status = "disabled";
 };

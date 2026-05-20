@@ -5,4 +5,4 @@ project(Power_Meter_Breadboard)
 
 add_subdirectory(lib/icm20948)
 
-target_sources(app PRIVATE src/main.c)
+target_sources(app PRIVATE src/main.c src/ads1220_ratiometric_example.c)
