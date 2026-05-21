@@ -3,6 +3,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
 project(Power_Meter_Breadboard)
 
-add_subdirectory(lib/icm20948)
+# add_subdirectory(lib/icm20948)
+add_subdirectory(lib/icm40609)
 
-target_sources(app PRIVATE src/main.c src/ads1220_ratiometric_example.c)
+target_sources(app PRIVATE src/main.c)

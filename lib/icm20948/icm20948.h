@@ -24,10 +24,6 @@
 /* Devicetree node for the child device under i2c0 */
 #define ICM20948_NODE DT_NODELABEL(icm20948)
 
-#if !DT_NODE_EXISTS(ICM20948_NODE)
-#error "No icm20948 node found in devicetree"
-#endif
-
 /**
  * @brief Struct containing relevant raw data from gyro
  *

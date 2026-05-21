@@ -1,0 +1,7 @@
+description: InvenSense ICM-40609 6-axis IMU
+
+compatible: "invensense,icm40609"
+
+include:
+  - base.yaml
+  - i2c-device.yaml

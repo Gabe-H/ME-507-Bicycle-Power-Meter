@@ -1,0 +1,15 @@
+# Your library Kconfig
+menuconfig ICM40609
+    bool "ICM40609 library"
+    default y
+
+if ICM40609
+
+# These two variables are consumed by the template.
+module = ICM40609
+module-str = "icm"
+
+# Pull in the standard Zephyr per-module log-level choice:
+source "subsys/logging/Kconfig.template.log_config"
+
+endif # ICM

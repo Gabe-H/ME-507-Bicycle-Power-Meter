@@ -18,15 +18,28 @@
 #include <zephyr/logging/log_ctrl.h>
 
 #define USE_IMU
-#define USE_ADC
+// #define USE_ADC
 
 #ifdef USE_IMU
-#include "icm20948.h"
+// #include "icm20948.h"
+// static const struct i2c_dt_spec icm = I2C_DT_SPEC_GET(ICM20948_NODE);
+// #if !DT_NODE_EXISTS(ICM20948_NODE)
+// #error "No icm20948 node found in devicetree"
+// #endif
+
+#include "icm40609.h"
+static const struct i2c_dt_spec icm = I2C_DT_SPEC_GET(ICM40609_NODE);
+#if !DT_NODE_EXISTS(ICM40609_NODE)
+#error "No icm40609 node found in devicetree"
+#endif
+
 #endif /* USE_IMU */
 
 #ifdef USE_ADC
 #include "ads1220.h"
 #endif /* USE_ADC */
+
+#define DPS_TO_RPM(x) (x * 0.1666)
 
 LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
 
@@ -45,7 +58,7 @@ int main(void)
         }
 #endif /* USE_ADC */
 #ifdef USE_IMU
-        if (icm20948_init()) // return 0 when properly configured
+        if (icm_init(&icm)) // return 0 when properly configured
                 return 0;
         LOG_INF("Gyro configured.");
 
@@ -57,7 +70,7 @@ int main(void)
                 int ret;
 
 #ifdef USE_IMU
-                ret = icm20948_read_gyro_raw(&g);
+                ret = icm_read_gyro_raw(&icm, &g);
 
                 if (ret)
                 {
