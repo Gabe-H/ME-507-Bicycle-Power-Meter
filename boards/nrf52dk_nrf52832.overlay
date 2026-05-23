@@ -20,6 +20,12 @@
         reg = <0x69>;
         status = "okay";
     };
+
+    max17048: max17048@36 {
+        compatible = "invensense,icm40609";
+        reg = <0x36>;
+        status = "okay";
+    };
 };
 
 &pinctrl {
@@ -73,5 +79,21 @@
 };
 
 &button3 {
+    status = "disabled";
+};
+
+&led0 {
+    status = "disabled";
+};
+
+&led1 {
+    status = "disabled";
+};
+
+&led2 {
+    status = "disabled";
+};
+
+&led3 {
     status = "disabled";
 };

@@ -1,0 +1,7 @@
+description: MAX17048 Battery Monitor
+
+compatible: "invensense,max17048"
+
+include:
+  - base.yaml
+  - i2c-device.yaml

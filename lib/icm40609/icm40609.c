@@ -2,7 +2,6 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/printk.h>
 
 LOG_MODULE_REGISTER(icm, LOG_LEVEL_INF);
 
@@ -22,7 +21,7 @@ int icm_init(icm_t *icm)
     LOG_INF("I2C bus ready, target address: 0x%02x", icm->addr);
 
     /* Optional: give the sensor time after power-up */
-    k_msleep(100);
+    k_msleep(50);
 
     ret = icm_reg_read(icm, ICM_REG_WHO_AM_I, &whoami);
     if (ret)
@@ -31,7 +30,7 @@ int icm_init(icm_t *icm)
         return 2;
     }
 
-    LOG_INF("WHO_AM_I = 0x%02x", whoami);
+    LOG_INF("WHO_AM_I = 0x%02x (expect 0x%02x)", whoami, ICM40609_WHO_AM_I_VAL);
 
     if (whoami == ICM40609_WHO_AM_I_VAL)
     {
@@ -43,48 +42,108 @@ int icm_init(icm_t *icm)
         return 3;
     }
 
-    ret = icm_init_gyro(icm);
-
+    ret = icm_reset(icm);
     if (ret)
     {
-        LOG_ERR("Failed to configure gyro! (%u)", ret);
-        return 4;
+        LOG_WRN("Failed to reset IMU %d]", ret);
+        return ret;
+    }
+
+    ret = icm_init_power(icm);
+    if (ret)
+    {
+        LOG_WRN("Failed to init IMU power [%d]", ret);
+        return ret;
+    }
+
+    ret = icm_init_gyro(icm);
+    if (ret)
+    {
+        LOG_WRN("Failed to init IMU gyro [%d]", ret);
+        return ret;
+    }
+
+    ret = icm_init_accel(icm);
+    if (ret)
+    {
+        LOG_WRN("Failed to init IMU accel [%d]", ret);
+        return ret;
     }
 
     return 0;
+}
+
+int icm_reset(icm_t *icm)
+{
+    int ret;
+
+    ret = icm_select_bank(icm, 0);
+    if (ret)
+        return 1;
+
+    ret = icm_reg_write(icm, ICM_REG_DEVICE_CONFIG, 0x01);
+    if (ret)
+        return 2;
+
+    LOG_INF("Triggered IMU reset");
+    k_msleep(500); // Datasheet says 1ms, but due to AD0 error, IMU needs more time to decide to use 0x69 address
+
+    return ret;
+}
+
+int icm_init_power(icm_t *icm)
+{
+    int ret;
+
+    ret = icm_select_bank(icm, 0);
+    if (ret)
+        return 1;
+
+    ret = icm_reg_write(icm, ICM_REG_PWR_MGMT0, 0b00001111); // Temp. enabled. RC auto. Gyro LN. Accel LN.
+    if (ret)
+        return 2;
+
+    LOG_INF("Configured power");
+
+    k_usleep(300); // Must wait at least 200us after turning on sensors
+
+    return ret;
 }
 
 int icm_init_gyro(icm_t *icm)
 {
     int ret;
 
-    // Move to bank 0 for system configuration
     ret = icm_select_bank(icm, 0);
-
-    // Set IMU awake, auto clock
-    ret = i2c_reg_write_byte_dt(icm, ICM_REG_PWR_MGMT_1, 0x01);
     if (ret)
         return 1;
 
-    // All accel/gyro axes on
-    ret = i2c_reg_write_byte_dt(icm, ICM_REG_PWR_MGMT_2, 0x00);
+    // Set gyro scale range (+/- 1000dps, 1kHz)
+    ret = icm_reg_write(icm, ICM_REG_GYRO_CONFIG0, 0b00100110);
     if (ret)
         return 2;
 
-    // Move to bank 2 for gyro configuration
-    ret = icm_select_bank(icm, 2);
+    LOG_INF("Configured gyro");
+
+    return ret;
+}
+
+int icm_init_accel(icm_t *icm)
+{
+    int ret;
+
+    ret = icm_select_bank(icm, 0);
     if (ret)
-        return 3;
+        return 1;
 
-    uint8_t gyro_config = 0x00;
-    gyro_config |= ICM_GYRO_RANGE_2000;
-
-    ret = i2c_reg_write_byte_dt(icm, ICM_REG_GYRO_CONFIG_1, gyro_config);
+    // Set accel scale range (+/- 8g, 1kHz)
+    ret = icm_reg_write(icm, ICM_REG_ACCEL_CONFIG0, 0b01000110);
     if (ret)
-        return 4;
+        return 2;
 
-    // Reset selected bank
-    return icm_select_bank(icm, 0);
+    LOG_INF("Configured accel.");
+
+    return ret;
 }
 
 int icm_reg_read(icm_t *icm, uint8_t reg, uint8_t *value)
@@ -92,12 +151,33 @@ int icm_reg_read(icm_t *icm, uint8_t reg, uint8_t *value)
     return i2c_write_read_dt(icm, &reg, sizeof(reg), value, 1);
 }
 
+int icm_reg_write(icm_t *icm, uint8_t reg, uint8_t value)
+{
+    return i2c_reg_write_byte_dt(icm, reg, value);
+}
+
+int icm_read_gyro(icm_t *icm, float *x, float *y, float *z)
+{
+    raw_gyro_t g;
+
+    // Populate g with reading
+    int ret = icm_read_gyro_raw(icm, &g);
+    if (ret)
+        return 1;
+
+    *x = ((float)g.x * ICM_GYRO_SCALE_FACTOR_1000DPS);
+    *y = ((float)g.y * ICM_GYRO_SCALE_FACTOR_1000DPS);
+    *z = ((float)g.z * ICM_GYRO_SCALE_FACTOR_1000DPS);
+
+    return ret;
+}
+
 int icm_read_gyro_raw(icm_t *icm, raw_gyro_t *g)
 {
     uint8_t buffer[6];
-    uint8_t reg = ICM_GYRO_XOUT_H;
+    uint8_t reg = ICM_REG_GYRO_DATA_X1;
 
-    int ret = i2c_write_read_dt(icm, &reg, sizeof(reg), &buffer, ICM_GYRO_SIZE);
+    int ret = i2c_write_read_dt(icm, &reg, sizeof(reg), &buffer, ICM_GYRO_DATA_SIZE);
 
     if (ret)
     {
@@ -109,10 +189,10 @@ int icm_read_gyro_raw(icm_t *icm, raw_gyro_t *g)
     g->y = (buffer[2] << 8) | buffer[3];
     g->z = (buffer[4] << 8) | buffer[5];
 
-    return 0;
+    return ret;
 }
 
 int icm_select_bank(icm_t *icm, uint8_t bank)
 {
-    return i2c_reg_write_byte_dt(icm, ICM_REG_BANK_SEL, (bank << 4));
+    return icm_reg_write(icm, ICM_REG_BANK_SEL, (bank & 0b111));
 }
