@@ -192,6 +192,43 @@ int icm_read_gyro_raw(icm_t *icm, raw_gyro_t *g)
     return ret;
 }
 
+int icm_read_accel(icm_t *icm, float *x, float *y, float *z)
+{
+    raw_accel_t a;
+
+    // Populate a with reading
+    int ret = icm_read_gyro_raw(icm, &a);
+    if (ret)
+        return 1;
+
+    *x = ((float)a.x * ICM_ACCEL_SCALE_FACTOR_8G);
+    *y = ((float)a.y * ICM_ACCEL_SCALE_FACTOR_8G);
+    *z = ((float)a.z * ICM_ACCEL_SCALE_FACTOR_8G);
+
+    return ret;
+}
+
+int icm_read_accel_raw(icm_t *icm, raw_accel_t *a)
+{
+    uint8_t buffer[6];
+    uint8_t reg = ICM_REG_ACCEL_DATA_X1;
+
+    // int ret = i2c_write_read_dt(icm, &reg, sizeof(reg), &buffer, ICM_GYRO_DATA_SIZE);
+    int ret = i2c_burst_read_dt(icm, ICM_REG_ACCEL_DATA_X1, &buffer, ICM_ACCEL_DATA_SIZE);
+
+    if (ret)
+    {
+        LOG_ERR("Failed to write/read from gyro registers");
+        return 1;
+    }
+
+    a->x = (buffer[0] << 8) | buffer[1];
+    a->y = (buffer[2] << 8) | buffer[3];
+    a->z = (buffer[4] << 8) | buffer[5];
+
+    return ret;
+}
+
 int icm_select_bank(icm_t *icm, uint8_t bank)
 {
     return icm_reg_write(icm, ICM_REG_BANK_SEL, (bank & 0b111));

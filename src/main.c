@@ -84,18 +84,20 @@ int main(void)
 
 #ifdef USE_IMU
         float gx, gy, gz;
+        float ax, ay, az;
+
         ret = icm_read_gyro(&icm, &gx, &gy, &gz);
+        ret = icm_read_accel(&icm, &ax, &ay, &az);
 
         if (ret)
         {
-            LOG_WRN("Error reading gyro values");
+            LOG_WRN("Error reading gyro/accel values");
         }
         else
         {
-            LOG_INF("Read gyro values:  x: %0.3f, y: %0.3f, z: %0.3f dps", gx, gy, gz);
+            LOG_INF("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g", gx, gy, gz, ax, ay, az);
         }
 
-        float ax, ay, az;
 #endif /* USE_IMU */
 
         k_sleep(K_SECONDS(1));

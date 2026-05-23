@@ -36,6 +36,7 @@
 #define ICM_GYRO_DATA_SIZE 6
 
 #define ICM_GYRO_SCALE_FACTOR_1000DPS (0.03049f) // 1/32.8
+#define ICM_ACCEL_SCALE_FACTOR_8G (0.00024414f)  // 1/4096 LSB/g
 
 // Registers in Bank 1
 #define ICM_REG_SENSOR_CONFIG0 0x03      // 7:6 Reserved
@@ -110,10 +111,8 @@ typedef struct
     int16_t x;
     int16_t y;
     int16_t z;
-    float scale;
 } raw_accel_t;
 
-// static const struct i2c_dt_spec icm_t;
 typedef const struct i2c_dt_spec icm_t;
 
 int icm_init(icm_t *icm);
@@ -137,6 +136,10 @@ int icm_reg_read(icm_t *icm, uint8_t reg, uint8_t *value);
 int icm_read_gyro(icm_t *icm, float *x, float *y, float *z);
 
 int icm_read_gyro_raw(icm_t *icm, raw_gyro_t *g);
+
+int icm_read_accel(icm_t *icm, float *x, float *y, float *z);
+
+int icm_read_accel_raw(icm_t *icm, raw_accel_t *a);
 
 // Select from register banks 0-4
 int icm_select_bank(icm_t *icm, uint8_t bank);
