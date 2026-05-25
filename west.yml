@@ -1,0 +1,12 @@
+manifest:
+  remotes:
+    # START #####
+    - name: badjeff
+      url-base: https://github.com/badjeff
+    # END #######
+  projects:
+    # START #####
+    - name: ads1220-zephyr-module
+      remote: badjeff
+      revision: main
+    # END #######

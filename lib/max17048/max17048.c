@@ -3,8 +3,8 @@
 // #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-// LOG_MODULE_REGISTER(mon, LOG_LEVEL_INF);
-LOG_MODULE_REGISTER(mon, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(mon, LOG_LEVEL_INF);
+// LOG_MODULE_REGISTER(mon, LOG_LEVEL_DBG);
 
 int battery_monitor_init(batt_mon_t *mon)
 {
@@ -68,7 +68,7 @@ uint8_t battery_monitor_read_soc(batt_mon_t *mon)
 
     if (val == 0xFFFF)
     {
-        return -1.0;
+        return 0xFF;
     }
 
     uint8_t batt_percent = val / 256;
@@ -78,14 +78,17 @@ uint8_t battery_monitor_read_soc(batt_mon_t *mon)
 
 uint16_t battery_monitor_read_config(batt_mon_t *mon)
 {
+    return -1;
 }
 
 uint16_t battery_monitor_read_status(batt_mon_t *mon)
 {
+    return -1;
 }
 
 uint16_t battery_monitor_read_mode(batt_mon_t *mon)
 {
+    return -1;
 }
 
 /**

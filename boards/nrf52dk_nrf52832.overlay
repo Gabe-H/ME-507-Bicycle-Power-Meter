@@ -1,5 +1,7 @@
 /* SPI pin selections for the ADS1220 */
 #include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
+#include <dt-bindings/spi/spi.h>
+#include <dt-bindings/gpio/gpio.h>
 
 &i2c0 {
     compatible = "nordic,nrf-twim";
@@ -47,7 +49,9 @@
     };
 };
 
+
 &spi1 {
+    compatible = "nordic,nrf-spim";
     status = "okay";
 
     pinctrl-0 = <&spi1_default>;
@@ -56,13 +60,67 @@
 
     cs-gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
 
-    ads1220: ads1220@0 {
+    adc_ads1220: adc_ads1220@0 {
         compatible = "ti,ads1220";
         reg = <0>;
-        spi-max-frequency = <1000000>;
         status = "okay";
-        drdy-gpios = <&gpio0 4 GPIO_ACTIVE_LOW>;
+
+        spi-max-frequency = <1000000>;
+
         #io-channel-cells = <1>;
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        /*
+        Setup for Wheatstone bridges
+        ref: https: //wolles-elektronikkiste.de/en/ads1220-part-2-applications
+        REFP1: Load cell Wire RED & AVCC
+        AIN1: Load cell Wire Green
+        AIN2: Load cell Wire White
+        REFN1: Load cell Wire Black & GND
+         */
+
+        adc_ads1220_ch0: channel@0 {
+            reg = <0>;
+            zephyr,resolution = <24>;
+            zephyr,gain = "ADC_GAIN_128";
+            zephyr,reference = "ADC_REF_EXTERNAL1";
+            zephyr,acquisition-time = <175>; // 175 SPS > 125Hz
+
+            zephyr,input-positive = <1>; // AIN1
+            zephyr,input-negative = <2>; // AIN2
+        };
+    };
+};
+
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+/{
+    /*
+    Setup the forked version of Zephyr's `analog-axis` input driver,
+    'hires' menas 14-bit buffering.
+    Literally, enlarged all int16_t to int13_t.
+     */
+    anin0: analog_axis_hires_0 {
+        compatible = "analog-axis-hires";
+        status = "okay";
+
+        axis-y {
+            io-channels = <&adc_ads1220 0>;
+            /* neutral raw value from Wheatstone bridges via ADS1220 */
+            /* NOTE: depends on zephyr,gain in adc_ads1220_ch0 */
+            in-min = <329030>;
+            in-max = <1930010>;
+            in-deadzone = <5>;
+
+            /* clamp output */
+            out-min = <( -1024)>;
+            out-max = <( 65535)>;
+            // skip-change-comparator; /* uncomment this to debug */
+
+            zephyr,axis-type = <INPUT_EV_ABS>;
+            zephyr,axis = <INPUT_ABS_Y>;
+        };
     };
 };
 

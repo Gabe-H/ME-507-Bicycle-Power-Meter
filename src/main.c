@@ -11,78 +11,76 @@
  * Written to be run on custom nRF52832-based PCB.
  */
 
+/** BEGIN INCLUDES **/
+// System
+#include <stdio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/logging/log_ctrl.h>
 
-#define USE_IMU
-// #define USE_ADC
-#define USE_BATT_MON
-
-#ifdef USE_IMU
-// #include "icm20948.h"
-// static const struct i2c_dt_spec icm = I2C_DT_SPEC_GET(ICM20948_NODE);
-// #if !DT_NODE_EXISTS(ICM20948_NODE)
-// #error "No icm20948 node found in devicetree"
-// #endif
-
+// Peripherals
 #include "icm40609.h"
-static const struct i2c_dt_spec icm = I2C_DT_SPEC_GET(ICM40609_NODE);
+#include "max17048.h"
+// #include "ads1220.h"
+/** END INCLUDES **/
+
+/** BEGIN PERIPHERAL CONFIGURATION **/
+
 #if !DT_NODE_EXISTS(ICM40609_NODE)
 #error "No icm40609 node found in devicetree"
 #endif
+icm_t icm = I2C_DT_SPEC_GET(ICM40609_NODE);
 
-#endif /* USE_IMU */
-
-#ifdef USE_BATT_MON
-#include "max17048.h"
+#if !DT_NODE_EXISTS(MAX17048_NODE)
+#error "No MAX17048 battery monitor node found in devicetree"
+#endif
 batt_mon_t batt_mon = I2C_DT_SPEC_GET(MAX17048_NODE);
-#endif /* USE_BATT_MON */
-
-#ifdef USE_ADC
-#include "ads1220.h"
-#endif /* USE_ADC */
+/** END PERIPHERAL CONFIGURATION */
 
 #define DPS_TO_RPM(x) (x * 0.1666)
 
+/** Logger configuration **/
 LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
 
+/** Threading configuration**/
+#define STACKSIZE 1024 // Stack area used by each thread
+
+K_FIFO_DEFINE(printk_fifo);
+
+/** Structs */
+// struct imu_data_t
+// {
+//     float gyro_z;     // Gyro angular vel in Z-dir [ dps ]
+//     float accel_x;    // Acceleration in X-dir [ g ]
+//     float accel_y;    // Acceleration in Y-dir [ g ]
+//     uint64_t boot_ms; // Milliseconds since boot of measurement [ ms ]
+// };
+
+// struct torque_data_t
+// {
+//     float torque;     // Torque measured by loadcell [ N*m ]
+//     uint64_t boot_ms; // Milliseconds since boot of measurement [ ms ]
+// };
+
 /**
- * @brief Entry function
+ * @brief RTOS Task for the IMU
  *
- * @return ignored by microcontroller
  */
-int main(void)
+void imu_task(void)
 {
-#ifdef USE_ADC
-    /* initialize ADS1220 example (non-blocking) */
-    if (ads1220_ratiometric_example_init())
-    {
-        LOG_ERR("ADS1220 example init failed");
-    }
-#endif /* USE_ADC */
-
-#ifdef USE_IMU
     if (icm_init(&icm)) // return 0 when properly configured
-        return 0;
+    {
+        return;
+    }
+
     LOG_INF("IMU configured.");
-
-    raw_gyro_t g = {0.0, 0.0, 0.0};
-#endif /* USE_IMU */
-
-#ifdef USE_BATT_MON
-    if (battery_monitor_init(&batt_mon)) // return 0 when properly configured
-        return 0;
-    LOG_INF("Battery monitor configured.");
-#endif
 
     while (1)
     {
         int ret;
 
-#ifdef USE_IMU
         float gx, gy, gz;
         float ax, ay, az;
 
@@ -95,13 +93,62 @@ int main(void)
         }
         else
         {
-            LOG_INF("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g", gx, gy, gz, ax, ay, az);
-        }
+            char *mem_ptr = k_malloc(100);
+            sprintf(mem_ptr, "Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g",
+                    (double)gx, (double)gy, (double)gz,
+                    (double)ax, (double)ay, (double)az);
+            k_fifo_put(&printk_fifo, mem_ptr);
 
-#endif /* USE_IMU */
+            // LOG_INF("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g", gx, gy, gz, ax, ay, az);
+        }
 
         k_sleep(K_SECONDS(1));
     }
-
-    return 0;
 }
+
+/**
+ * @brief RTOS Task for battery monitoring
+ *
+ */
+void battery_monitor_task(void)
+{
+
+    if (battery_monitor_init(&batt_mon)) // return 0 when properly configured
+    {
+        // return 0;
+        while (1) // Do nothing else in this task
+            k_sleep(K_FOREVER);
+    }
+
+    while (1)
+    {
+        uint8_t pct = battery_monitor_read_soc(&batt_mon);
+
+        char *mem_ptr = k_malloc(32);
+        sprintf(mem_ptr, "Battery SOC: %d%%", pct);
+        k_fifo_put(&printk_fifo, mem_ptr);
+
+        k_sleep(K_SECONDS(5));
+    }
+}
+
+/**
+ * @brief RTOS Task for sending messages to RTT terminal
+ *
+ * Messages are sent as a char array pointer to the FIFO buffer
+ */
+void rtt_task(void)
+{
+    while (1)
+    {
+        char *rx_data = k_fifo_get(&printk_fifo, K_FOREVER);
+
+        puts(rx_data);
+        k_free(rx_data);
+    }
+}
+
+/** Thread creation **/
+K_THREAD_DEFINE(imu_task_id, STACKSIZE, imu_task, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(battery_task_id, STACKSIZE, battery_monitor_task, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(rtt_task_id, STACKSIZE, rtt_task, NULL, NULL, NULL, 7, 0, 0);
