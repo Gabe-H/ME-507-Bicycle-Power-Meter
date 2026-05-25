@@ -1,3 +1,12 @@
+/**
+ * @file max17048.c
+ * @brief Driver for MAX17048 Battery monitor. Written for use in Bike Power Meter project.
+ * @version 0.1
+ * @date 2026-05-24
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "max17048.h"
 
 // #include <zephyr/kernel.h>
