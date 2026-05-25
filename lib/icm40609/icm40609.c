@@ -1,3 +1,12 @@
+/**
+ * @file icm40609.c
+ * @brief Driver for ICM40609 IMU. Written for Bike Power Meter Project.
+ * @version 0.1
+ * @date 2026-05-24
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "icm40609.h"
 
 #include <zephyr/kernel.h>
