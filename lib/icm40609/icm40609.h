@@ -76,6 +76,9 @@
                           // 3:0 (upper bits of Y-accel offset)
 #define OFFSET_USER8 0x7F // 7:0 (lower bits of Z-accel offset)
 
+/* Specific type for ICM peripheral */
+typedef const struct i2c_dt_spec icm_t;
+
 /* Devicetree node for the child device under i2c0 */
 #define ICM40609_NODE DT_NODELABEL(icm40609)
 

@@ -185,9 +185,9 @@ int icm_read_gyro_raw(icm_t *icm, raw_gyro_t *g)
         return 1;
     }
 
-    g->x = (buffer[0] << 8) | buffer[1];
-    g->y = (buffer[2] << 8) | buffer[3];
-    g->z = (buffer[4] << 8) | buffer[5];
+    g->x = (int16_t)(((uint16_t)buffer[0] << 8) | buffer[1]);
+    g->y = (int16_t)(((uint16_t)buffer[2] << 8) | buffer[3]);
+    g->z = (int16_t)(((uint16_t)buffer[4] << 8) | buffer[5]);
 
     return ret;
 }
@@ -197,7 +197,7 @@ int icm_read_accel(icm_t *icm, float *x, float *y, float *z)
     raw_accel_t a;
 
     // Populate a with reading
-    int ret = icm_read_gyro_raw(icm, &a);
+    int ret = icm_read_accel_raw(icm, &a);
     if (ret)
         return 1;
 
@@ -222,9 +222,9 @@ int icm_read_accel_raw(icm_t *icm, raw_accel_t *a)
         return 1;
     }
 
-    a->x = (buffer[0] << 8) | buffer[1];
-    a->y = (buffer[2] << 8) | buffer[3];
-    a->z = (buffer[4] << 8) | buffer[5];
+    a->x = (int16_t)(((uint16_t)buffer[0] << 8) | buffer[1]);
+    a->y = (int16_t)(((uint16_t)buffer[2] << 8) | buffer[3]);
+    a->z = (int16_t)(((uint16_t)buffer[4] << 8) | buffer[5]);
 
     return ret;
 }
