@@ -107,15 +107,17 @@
 
         axis-y {
             io-channels = <&adc_ads1220 0>;
-            /* neutral raw value from Wheatstone bridges via ADS1220 */
-            /* NOTE: depends on zephyr,gain in adc_ads1220_ch0 */
-            in-min = <329030>;
-            in-max = <1930010>;
-            in-deadzone = <5>;
+            in-min = <(-3000000)>;
+            in-max = <3000000>;
 
-            /* clamp output */
-            out-min = <( -1024)>;
-            out-max = <( 65535)>;
+            /* Ignore small fluctuations around center to reduce chatter */
+            in-deadzone = <5000>;
+
+            /* Map to a signed 16-bit output range (useful for consumers expecting
+             * negative and positive axis values). Change if you prefer 0..65535.
+             */
+            out-min = <( -32768)>;
+            out-max = <( 32767)>;
             // skip-change-comparator; /* uncomment this to debug */
 
             zephyr,axis-type = <INPUT_EV_ABS>;
@@ -154,4 +156,7 @@
 
 &led3 {
     status = "disabled";
+};
+&arduino_adc {
+    io-channel-map = <0 &adc 1>, <1 &adc 2>, <2 &adc 4>, <3 &adc 5>, <4 &adc 6>, <5 &adc 7>;
 };

@@ -9,4 +9,5 @@ manifest:
     - name: ads1220-zephyr-module
       remote: badjeff
       revision: main
+      path: modules/ads1220
     # END #######
