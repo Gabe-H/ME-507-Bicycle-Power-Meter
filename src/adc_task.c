@@ -1,3 +1,13 @@
+/**
+ * @file adc_task.c
+ * @author Gabe Haarberg
+ * @brief Task and helpers for reading from strain gauge ADC
+ * @version 0.1
+ * @date 2026-05-31
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "adc_task.h"
 
 /**
