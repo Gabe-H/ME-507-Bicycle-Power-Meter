@@ -12,8 +12,8 @@
 // #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-// LOG_MODULE_REGISTER(mon, LOG_LEVEL_INF);
-LOG_MODULE_REGISTER(mon, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(mon, LOG_LEVEL_INF);
+// LOG_MODULE_REGISTER(mon, LOG_LEVEL_DBG);
 
 int battery_monitor_init(batt_mon_t *mon)
 {
