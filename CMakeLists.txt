@@ -12,4 +12,5 @@ target_sources(app PRIVATE
     src/app_ipc.c
     src/imu_task.c
     src/adc_task.c
+    src/filter_task.c
 )

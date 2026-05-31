@@ -25,7 +25,7 @@
 #include "max17048.h"
 #include "imu_task.h"
 
-#include <math.h>
+// #include <math.h>
 /** END INCLUDES **/
 
 /** BEGIN PERIPHERAL CONFIGURATION **/
@@ -73,45 +73,6 @@ void battery_monitor_task(void)
 }
 
 /**
- * @brief Angular velocity and angle position processing and filtering
- *
- */
-void angle_task(void)
-{
-    while (1)
-    {
-        struct imu_data_t *data = k_fifo_get(&imu_fifo, K_FOREVER);
-
-        k_mem_slab_free(&imu_data_slab, (void *)data);
-
-        float angle = 0;
-
-        if (data->accel_x == 0)
-        {
-            angle = 1.5708;
-        }
-        else
-        {
-            angle = atanf(data->accel_y / data->accel_x);
-
-            // angle += 1.5708; // Offset due to IMU placement
-
-            // Depending on signage of x component, add 180deg offset
-            // to ensure output angle goes from 0-360 (rather than 0-180)
-            // if (data->accel_x < 0)
-            //     angle += 3.1415;
-        }
-
-        char *mem_ptr = k_malloc(50);
-
-        // sprintf(mem_ptr, "Angle: %f", angle);
-        sprintf(mem_ptr, "X: %.2f, Y: %.2f", (double)data->accel_x, (double)data->accel_y);
-
-        k_fifo_put(&printk_fifo, mem_ptr);
-    }
-}
-
-/**
  * @brief RTOS Task for sending messages to RTT terminal
  *
  * Messages are sent as a char array pointer to the FIFO buffer
@@ -129,7 +90,6 @@ void rtt_task(void)
 
 /** Thread creation **/
 K_THREAD_DEFINE(battery_task_id, STACKSIZE, battery_monitor_task, NULL, NULL, NULL, 7, 0, 0);
-K_THREAD_DEFINE(angle_task_id, STACKSIZE, angle_task, NULL, NULL, NULL, 6, 0, 0);
 K_THREAD_DEFINE(rtt_task_id, STACKSIZE, rtt_task, NULL, NULL, NULL, 7, 0, 0);
 
 /** Register ADC axis callback **/
