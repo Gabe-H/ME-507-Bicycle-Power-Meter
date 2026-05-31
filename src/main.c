@@ -25,6 +25,8 @@
 // Peripherals
 #include "icm40609.h"
 #include "max17048.h"
+
+#include <math.h>
 /** END INCLUDES **/
 
 /** BEGIN PERIPHERAL CONFIGURATION **/
@@ -48,6 +50,8 @@ LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
 
 /** Threading configuration**/
 #define STACKSIZE 1024 // Stack area used by each thread
+#define IMU_DATA_SLAB_NUM_BLOCKS 20
+#define IMU_DATA_SLAB_ALIGNMENT 8 // Need 8 because data is dealing with int64_t
 
 K_FIFO_DEFINE(printk_fifo);
 
@@ -60,18 +64,25 @@ struct axis_data
 K_FIFO_DEFINE(axis_fifo);
 
 /** Structs */
-// struct imu_data_t
-// {
-//     float gyro_z;     // Gyro angular vel in Z-dir [ dps ]
-//     float accel_x;    // Acceleration in X-dir [ g ]
-//     float accel_y;    // Acceleration in Y-dir [ g ]
-//     uint64_t boot_ms; // Milliseconds since boot of measurement [ ms ]
-// };
+struct imu_data_t
+{
+    float gyro_z;  // Gyro angular vel in Z-dir [ dps ]
+    float accel_x; // Acceleration in X-dir [ g ]
+    float accel_y; // Acceleration in Y-dir [ g ]
+    int64_t ts;    // Timestamp. Millis since boot [ ms ]
+};
+
+K_MEM_SLAB_DEFINE(imu_data_slab,
+                  sizeof(struct imu_data_t),
+                  IMU_DATA_SLAB_NUM_BLOCKS,
+                  IMU_DATA_SLAB_ALIGNMENT);
+
+K_FIFO_DEFINE(imu_fifo);
 
 // struct torque_data_t
 // {
 //     float torque;     // Torque measured by loadcell [ N*m ]
-//     uint64_t boot_ms; // Milliseconds since boot of measurement [ ms ]
+//     int64_t ts; // Timestamp. Millis since boot [ ms ]
 // };
 
 /**
@@ -89,10 +100,9 @@ void imu_task(void)
 
     while (1)
     {
-        int ret;
-
-        float gx, gy, gz;
-        float ax, ay, az;
+        static int ret;
+        static float gx, gy, gz;
+        static float ax, ay, az;
 
         ret = icm_read_gyro(&icm, &gx, &gy, &gz);
         ret = icm_read_accel(&icm, &ax, &ay, &az);
@@ -103,6 +113,21 @@ void imu_task(void)
         }
         else
         {
+            struct imu_data_t *data;
+
+            if (k_mem_slab_alloc(&imu_data_slab, (void **)&data, K_MSEC(100)) == 0)
+            {
+                data->accel_x = ax;
+                data->accel_y = ay;
+                data->gyro_z = gz;
+                data->ts = k_uptime_get();
+
+                k_fifo_put(&imu_fifo, data);
+            }
+            else
+            {
+                LOG_WRN("Warning: Couldn't allocate space on slab");
+            }
             // char *mem_ptr = k_malloc(100);
             // sprintf(mem_ptr, "Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g",
             //         (double)gx, (double)gy, (double)gz,
@@ -130,10 +155,16 @@ void battery_monitor_task(void)
 
     while (1)
     {
-        uint8_t pct = battery_monitor_read_soc(&batt_mon);
+        // uint8_t pct = battery_monitor_read_soc(&batt_mon);
+
+        // char *mem_ptr = k_malloc(32);
+        // sprintf(mem_ptr, "Battery SOC: %d%%", pct);
+        // k_fifo_put(&printk_fifo, mem_ptr);
+
+        uint16_t volts = battery_monitor_read_voltage(&batt_mon); // Value is returned in millivolts
 
         char *mem_ptr = k_malloc(32);
-        sprintf(mem_ptr, "Battery SOC: %d%%", pct);
+        sprintf(mem_ptr, "Battery voltage: %dmV", volts);
         k_fifo_put(&printk_fifo, mem_ptr);
 
         k_sleep(K_SECONDS(5));
@@ -193,6 +224,45 @@ void adc_task(void)
 }
 
 /**
+ * @brief Angular velocity and angle position processing and filtering
+ *
+ */
+void angle_task(void)
+{
+    while (1)
+    {
+        struct imu_data_t *data = k_fifo_get(&imu_fifo, K_FOREVER);
+
+        k_mem_slab_free(&imu_data_slab, (void *)data);
+
+        float angle = 0;
+
+        if (data->accel_x == 0)
+        {
+            angle = 1.5708;
+        }
+        else
+        {
+            angle = atanf(data->accel_y / data->accel_x);
+
+            // angle += 1.5708; // Offset due to IMU placement
+
+            // Depending on signage of x component, add 180deg offset
+            // to ensure output angle goes from 0-360 (rather than 0-180)
+            // if (data->accel_x < 0)
+            //     angle += 3.1415;
+        }
+
+        char *mem_ptr = k_malloc(50);
+
+        // sprintf(mem_ptr, "Angle: %f", angle);
+        sprintf(mem_ptr, "X: %.2f, Y: %.2f", data->accel_x, data->accel_y);
+
+        k_fifo_put(&printk_fifo, mem_ptr);
+    }
+}
+
+/**
  * @brief RTOS Task for sending messages to RTT terminal
  *
  * Messages are sent as a char array pointer to the FIFO buffer
@@ -212,6 +282,7 @@ void rtt_task(void)
 K_THREAD_DEFINE(imu_task_id, STACKSIZE, imu_task, NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(battery_task_id, STACKSIZE, battery_monitor_task, NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(adc_task_id, STACKSIZE, adc_task, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(angle_task_id, STACKSIZE, angle_task, NULL, NULL, NULL, 6, 0, 0);
 K_THREAD_DEFINE(rtt_task_id, STACKSIZE, rtt_task, NULL, NULL, NULL, 7, 0, 0);
 
 /** Register ADC axis callback **/
