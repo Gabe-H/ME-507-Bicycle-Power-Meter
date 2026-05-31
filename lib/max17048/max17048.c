@@ -12,8 +12,8 @@
 // #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(mon, LOG_LEVEL_INF);
-// LOG_MODULE_REGISTER(mon, LOG_LEVEL_DBG);
+// LOG_MODULE_REGISTER(mon, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(mon, LOG_LEVEL_DBG);
 
 int battery_monitor_init(batt_mon_t *mon)
 {
@@ -65,6 +65,30 @@ int battery_monitor_init(batt_mon_t *mon)
 }
 
 /**
+ * @brief Read battery level in voltage (mV)
+ *
+ * @param mon Battery monitor device pointer
+ * @return uint16_t Battery level in millivolts
+ */
+uint16_t battery_monitor_read_voltage(batt_mon_t *mon)
+{
+    uint16_t val;
+
+    val = battery_monitor_write_read(mon, MAX17048_REG_VCELL);
+
+    if (val == 0xFFFF)
+    {
+        return val;
+    }
+
+    /* Val returned is 16-bit where LSB = 78.125 uV (0.078125 mV) */
+    /* mv = val * 0.078125 mV = val * 625 / 8000 */
+    uint32_t mv = ((uint32_t)val * 625) / 8000;
+
+    return (uint16_t)mv;
+}
+
+/**
  * @brief Read battery level in percent
  *
  * @param mon Battery monitor device pointer
@@ -107,16 +131,17 @@ uint16_t battery_monitor_read_mode(batt_mon_t *mon)
  * @param reg Target register
  * @return uint16_t Return value. Bad read returns 0xFFFF.
  */
-uint16_t battery_monitor_write_read(batt_mon_t *mon, uint16_t reg)
+uint16_t battery_monitor_write_read(batt_mon_t *mon, uint8_t reg)
 {
     uint8_t buf[2];
-    if (i2c_write_read_dt(mon, &reg, 2, &buf, 2))
+    /* Write single-byte register address, then read 2-byte register value */
+    if (i2c_write_read_dt(mon, &reg, 1, &buf, 2))
     {
-        LOG_INF("Failed to write 0x%04x to battery monitor", reg);
+        LOG_INF("Failed to write 0x%02x to battery monitor", reg);
         return 0xFFFF;
     }
 
     LOG_DBG("Received 0x%02x 0x%02x", buf[0], buf[1]);
 
-    return (buf[0] << 8) | buf[1];
+    return (uint16_t)((buf[0] << 8) | buf[1]);
 }

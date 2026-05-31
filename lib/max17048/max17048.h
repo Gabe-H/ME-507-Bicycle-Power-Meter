@@ -34,6 +34,8 @@ typedef const struct i2c_dt_spec batt_mon_t;
 
 int battery_monitor_init(batt_mon_t *mon);
 
+uint16_t battery_monitor_read_voltage(batt_mon_t *mon);
+
 uint8_t battery_monitor_read_soc(batt_mon_t *mon);
 
 uint16_t battery_monitor_read_config(batt_mon_t *mon);
@@ -44,6 +46,6 @@ uint16_t battery_monitor_read_mode(batt_mon_t *mon);
 
 uint8_t battery_monitor_read_pct(batt_mon_t *mon);
 
-uint16_t battery_monitor_write_read(batt_mon_t *mon, uint16_t reg);
+uint16_t battery_monitor_write_read(batt_mon_t *mon, uint8_t reg);
 
 #endif /* __MAX17048_H */
