@@ -7,6 +7,8 @@
 #define STACKSIZE 1024              // Stack area used by each thread
 #define IMU_DATA_SLAB_NUM_BLOCKS 20 // Number of blocks to allocate for IMU memory slab
 #define IMU_DATA_SLAB_ALIGNMENT 8   // Need 8 because data is dealing with int64_t
+#define AXIS_DATA_SLAB_NUM_BLOCKS 16
+#define AXIS_DATA_SLAB_ALIGNMENT 8
 
 /** Axis data FIFO for queuing mapped axis values from callback **/
 
@@ -37,6 +39,7 @@ struct imu_data_t
 };
 
 extern struct k_fifo axis_fifo;
+extern struct k_mem_slab axis_data_slab;
 extern struct k_fifo imu_fifo;
 extern struct k_fifo printk_fifo;
 extern struct k_mem_slab imu_data_slab;

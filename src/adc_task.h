@@ -10,7 +10,7 @@
 // #include <zephyr/devicetree.h>
 #include "app_ipc.h"
 
-void adc_task(void);
+static void adc_task(void);
 
 static void input_evt_cb(struct input_event *evt, void *user_data);
 

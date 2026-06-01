@@ -10,13 +10,22 @@
  */
 #include "adc_task.h"
 
+#include <stdio.h>
+
+LOG_MODULE_REGISTER(adc, LOG_LEVEL_INF);
+
+K_MEM_SLAB_DEFINE(axis_data_slab,
+                  sizeof(struct axis_data),
+                  AXIS_DATA_SLAB_NUM_BLOCKS,
+                  AXIS_DATA_SLAB_ALIGNMENT);
+
 /**
  * @brief RTOS Task for reading values from the ADC
  *
  * Registers the analog-axis callback, then continuously reads mapped axis
  * values from the axis_fifo queue and forwards them to RTT via printk_fifo.
  */
-void adc_task(void)
+static void adc_task(void)
 {
     /* Main loop: read axis values from callback queue and print */
     while (1)
@@ -31,7 +40,7 @@ void adc_task(void)
                 sprintf(mem_ptr, "Axis ch%d: %d", axis_msg->channel, (int)axis_msg->value);
                 k_fifo_put(&printk_fifo, mem_ptr);
             }
-            k_free(axis_msg);
+            k_mem_slab_free(&axis_data_slab, (void *)axis_msg);
         }
     }
 }
@@ -51,13 +60,23 @@ static void input_evt_cb(struct input_event *evt, void *user_data)
     /* Filter for Y axis absolute position events */
     if (evt->type == INPUT_EV_ABS && evt->code == INPUT_ABS_Y)
     {
-        struct axis_data *axis_msg = k_malloc(sizeof(struct axis_data));
-        if (axis_msg)
+        LOG_DBG("Y-Axis value received: %d", evt->value);
+
+        struct axis_data *axis_msg;
+        if (k_mem_slab_alloc(&axis_data_slab, (void **)&axis_msg, K_NO_WAIT) == 0)
         {
             axis_msg->channel = 0;
             axis_msg->value = evt->value; /* Already scaled/clamped by driver */
             k_fifo_put(&axis_fifo, axis_msg);
         }
+        else
+        {
+            LOG_WRN("Failed to allocate memory for axis slab item");
+        }
+    }
+    else
+    {
+        LOG_DBG("Received event type: %d code: %d", evt->type, evt->code);
     }
 }
 
