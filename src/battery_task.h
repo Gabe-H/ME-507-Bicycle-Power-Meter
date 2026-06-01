@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include "max17048.h"
 #include "app_ipc.h"
 

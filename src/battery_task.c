@@ -1,6 +1,6 @@
 #include "battery_task.h"
 
-LOG_MODULE_REGISTER(battery_mon, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(batt, LOG_LEVEL_INF);
 
 static batt_mon_t batt_mon = I2C_DT_SPEC_GET(MAX17048_NODE);
 
