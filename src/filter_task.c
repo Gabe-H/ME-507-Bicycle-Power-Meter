@@ -64,4 +64,4 @@ void filter_task(void)
     }
 }
 
-K_THREAD_DEFINE(angle_task_id, STACKSIZE, filter_task, NULL, NULL, NULL, 6, 0, 0);
+K_THREAD_DEFINE(filter_task_id, STACKSIZE, filter_task, NULL, NULL, NULL, 6, 0, 0);
