@@ -11,6 +11,6 @@
 #error "No MAX17048 battery monitor node found in devicetree"
 #endif
 
-static void battery_monitor_task(void);
+static void battery_monitor_thread(void);
 
 #endif /* BATT_MON_H */

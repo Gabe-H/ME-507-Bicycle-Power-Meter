@@ -11,9 +11,9 @@ add_subdirectory(lib/ble)
 target_sources(app PRIVATE
     src/main.c
     src/app_ipc.c
-    src/imu_task.c
-    src/adc_task.c
-    src/filter_task.c
-    src/battery_task.c
-    src/ble_task.c
+    src/imu_thread.c
+    src/adc_thread.c
+    src/filter_thread.c
+    src/battery_thread.c
+    src/ble_thread.c
 )

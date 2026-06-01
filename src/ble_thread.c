@@ -1,4 +1,4 @@
-#include "ble_task.h"
+#include "ble_thread.h"
 
 LOG_MODULE_REGISTER(ble, LOG_LEVEL_DBG);
 

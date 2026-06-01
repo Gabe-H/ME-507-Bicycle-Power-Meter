@@ -1,4 +1,4 @@
-#include "imu_task.h"
+#include "imu_thread.h"
 
 /** Logger configuration **/
 LOG_MODULE_REGISTER(imu, LOG_LEVEL_INF);
@@ -12,10 +12,10 @@ K_MEM_SLAB_DEFINE(imu_data_slab,
 static icm_t icm = I2C_DT_SPEC_GET(ICM40609_NODE);
 
 /**
- * @brief RTOS Task for the IMU
+ * @brief Zephyr thread for the IMU
  *
  */
-void imu_task(void)
+void imu_thread(void)
 {
     if (icm_init(&icm)) // return 0 when properly configured
     {
@@ -67,4 +67,4 @@ void imu_task(void)
     }
 }
 
-K_THREAD_DEFINE(imu_task_id, STACKSIZE, imu_task, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(imu_thread_id, STACKSIZE, imu_thread, NULL, NULL, NULL, 7, 0, 0);

@@ -1,14 +1,14 @@
 /**
- * @file adc_task.c
+ * @file adc_thread.c
  * @author Gabe Haarberg
- * @brief Task and helpers for reading from strain gauge ADC
+ * @brief Thread and helpers for reading from strain gauge ADC
  * @version 0.1
  * @date 2026-05-31
  *
  * @copyright Copyright (c) 2026
  *
  */
-#include "adc_task.h"
+#include "adc_thread.h"
 
 #include <stdio.h>
 
@@ -20,12 +20,12 @@ K_MEM_SLAB_DEFINE(axis_data_slab,
                   AXIS_DATA_SLAB_ALIGNMENT);
 
 /**
- * @brief RTOS Task for reading values from the ADC
+ * @brief Zephyr thread for reading values from the ADC
  *
  * Registers the analog-axis callback, then continuously reads mapped axis
  * values from the axis_fifo queue and forwards them to RTT via printk_fifo.
  */
-static void adc_task(void)
+static void adc_thread(void)
 {
     /* Main loop: read axis values from callback queue and print */
     while (1)
@@ -80,7 +80,7 @@ static void input_evt_cb(struct input_event *evt, void *user_data)
     }
 }
 
-K_THREAD_DEFINE(adc_task_id, STACKSIZE, adc_task, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(adc_thread_id, STACKSIZE, adc_thread, NULL, NULL, NULL, 7, 0, 0);
 
 INPUT_CALLBACK_DEFINE(
     // DEVICE_DT_GET(DT_NODELABEL(anin0)),

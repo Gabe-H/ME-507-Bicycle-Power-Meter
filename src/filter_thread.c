@@ -1,10 +1,10 @@
-#include "filter_task.h"
+#include "filter_thread.h"
 
 /**
  * @brief Angular velocity and angle position processing and filtering
  *
  */
-void filter_task(void)
+void filter_thread(void)
 {
     while (1)
     {
@@ -64,4 +64,4 @@ void filter_task(void)
     }
 }
 
-K_THREAD_DEFINE(filter_task_id, STACKSIZE, filter_task, NULL, NULL, NULL, 6, 0, 0);
+K_THREAD_DEFINE(filter_thread_id, STACKSIZE, filter_thread, NULL, NULL, NULL, 6, 0, 0);

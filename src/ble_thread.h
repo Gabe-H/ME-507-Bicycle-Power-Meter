@@ -1,5 +1,5 @@
-#ifndef BLE_TASK_H
-#define BLE_TASK_H
+#ifndef BLE_THREAD_H
+#define BLE_THREAD_H
 
 #include <zephyr/kernel.h>
 #include <zephyr/bluetooth/bluetooth.h>
@@ -55,4 +55,4 @@ static void recycled_cb(void);
 
 static void cps_notify_thread(void);
 
-#endif /* BLE_TASK_H */
+#endif /* BLE_THREAD_H */

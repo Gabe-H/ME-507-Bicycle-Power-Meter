@@ -1,5 +1,5 @@
-#ifndef IMU_TASK_H
-#define IMU_TASK_H
+#ifndef IMU_THREAD_H
+#define IMU_THREAD_H
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -12,6 +12,6 @@
 #error "No icm40609 node found in devicetree"
 #endif
 
-void imu_task(void);
+void imu_thread(void);
 
-#endif /* IMU_TASK_H */
+#endif /* IMU_THREAD_H */

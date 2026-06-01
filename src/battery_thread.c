@@ -1,14 +1,14 @@
-#include "battery_task.h"
+#include "battery_thread.h"
 
 LOG_MODULE_REGISTER(batt, LOG_LEVEL_INF);
 
 static batt_mon_t batt_mon = I2C_DT_SPEC_GET(MAX17048_NODE);
 
 /**
- * @brief RTOS Task for battery monitoring
+ * @brief Zephyr thread for battery monitoring
  *
  */
-static void battery_monitor_task(void)
+static void battery_monitor_thread(void)
 {
 
     if (battery_monitor_init(&batt_mon)) // return 0 when properly configured
@@ -34,4 +34,4 @@ static void battery_monitor_task(void)
     }
 }
 
-K_THREAD_DEFINE(battery_task_id, STACKSIZE, battery_monitor_task, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(battery_thread_id, STACKSIZE, battery_monitor_thread, NULL, NULL, NULL, 7, 0, 0);

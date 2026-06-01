@@ -8,7 +8,7 @@
  * @copyright Copyright (c) 2026
  *
  *
- * Written to be run on custom nRF52832-based PCB. Individual tasks can be found in their src/ *_task.c files
+ * Written to be run on custom nRF52832-based PCB. Individual thread functions can be found in their src/ *_thread.c files
  */
 
 /** BEGIN INCLUDES **/
@@ -25,11 +25,11 @@
 LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
 
 /**
- * @brief RTOS Task for sending messages to RTT terminal
+ * @brief Zephyr thread for sending messages to RTT terminal
  *
  * Messages are sent as a char array pointer to the FIFO buffer
  */
-void rtt_task(void)
+void rtt_thread(void)
 {
     while (1)
     {
@@ -40,4 +40,4 @@ void rtt_task(void)
     }
 }
 
-K_THREAD_DEFINE(rtt_task_id, STACKSIZE, rtt_task, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(rtt_thread_id, STACKSIZE, rtt_thread, NULL, NULL, NULL, 7, 0, 0);
