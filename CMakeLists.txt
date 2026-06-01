@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 
-project(Power_Meter_Breadboard)
+project(ME-507-Power-Meter)
 
 # add_subdirectory(lib/icm20948)
 add_subdirectory(lib/icm40609)
