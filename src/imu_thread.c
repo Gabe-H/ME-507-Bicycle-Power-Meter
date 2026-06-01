@@ -15,7 +15,7 @@ static icm_t icm = I2C_DT_SPEC_GET(ICM40609_NODE);
  * @brief Zephyr thread for the IMU
  *
  */
-void imu_thread(void)
+static void imu_thread(void)
 {
     if (icm_init(&icm)) // return 0 when properly configured
     {

@@ -2,7 +2,6 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/sys/printk.h>
 
 LOG_MODULE_REGISTER(icm, LOG_LEVEL_INF);
 
@@ -13,7 +12,7 @@ int icm20948_init(void)
     int ret;
     uint8_t whoami = 0;
 
-    printk("ICM-20948 WHO_AM_I test starting...\n");
+    LOG_DBG("ICM-20948 WHO_AM_I test starting...\n");
 
     if (!device_is_ready(icm.bus))
     {

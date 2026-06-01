@@ -46,7 +46,9 @@ void rtt_thread(void)
 }
 
 /**
- * @brief Main thread. Coordinates tasks before allowing them to enter their loops
+ * @brief Main thread. Coordinates all thread setup before allowing them to enter their loops
+ *
+ * See coordination configuration in app_ipc.h
  *
  */
 int main(void)

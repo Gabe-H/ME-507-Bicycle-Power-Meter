@@ -4,8 +4,34 @@
  * @brief Angular velocity and angle position processing and filtering
  *
  */
-void filter_thread(void)
+static void filter_thread(void)
 {
+    // Kalman setup
+    eekf_context ctx;
+    // state of the filter
+    EEKF_DECL_MAT_INIT(x, 2, 1, 0);
+    EEKF_DECL_MAT_INIT(P, 2, 2,
+                       pow(s_w, 2) * pow(dT, 4) / 4, pow(s_w, 2) * pow(dT, 3) / 2,
+                       pow(s_w, 2) * pow(dT, 3) / 2, pow(s_w, 2) * pow(dT, 2));
+    // input and process noise variables
+    EEKF_DECL_MAT_INIT(u, 1, 1, 0.1);
+    EEKF_DECL_MAT_INIT(Q, 2, 2,
+                       pow(s_w, 2) * pow(dT, 4) / 4, pow(s_w, 2) * pow(dT, 3) / 2,
+                       pow(s_w, 2) * pow(dT, 3) / 2, pow(s_w, 2) * pow(dT, 2));
+    // measurement and measurement noise variables
+    EEKF_DECL_MAT_INIT(z, 1, 1, 0);
+    EEKF_DECL_MAT_INIT(R, 1, 1, s_z * s_z);
+
+    int k;
+    eekf_value v = 0, p = 0;
+
+    for (k = 0; k < 1000; k++)
+    {
+    }
+
+    // initialize the filter context
+    eekf_init(&ctx, &x, &P, transition, measurement, NULL);
+
     // Post READY bit to sync event share
     k_event_post(&thread_sync_event, FILTER_THREAD_READY);
 
@@ -68,6 +94,37 @@ void filter_thread(void)
 
         k_fifo_put(&printk_fifo, mem_ptr);
     }
+}
+
+/**
+ * @brief The state prediction function
+ *
+ * @param xp
+ * @param Jf
+ * @param x
+ * @param u
+ * @param userData
+ * @return eekf_return
+ */
+static eekf_return transition(eekf_mat *xp, eekf_mat *Jf, eekf_mat const *x,
+                              eekf_mat const *u, void *userData)
+{
+    return eEekfReturnOk;
+}
+
+/**
+ * @brief The measurement prediction function
+ *
+ * @param zp
+ * @param Jh
+ * @param x
+ * @param userData
+ * @return eekf_return
+ */
+static eekf_return measurement(eekf_mat *zp, eekf_mat *Jh, eekf_mat const *x,
+                               void *userData)
+{
+    return eEekfReturnOk;
 }
 
 K_THREAD_DEFINE(filter_thread_id, STACKSIZE, filter_thread, NULL, NULL, NULL, 6, 0, 0);

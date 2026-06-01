@@ -3,8 +3,6 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
-// #include <zephyr/device.h>
-// #include <zephyr/devicetree.h>
 #include "icm40609.h"
 #include "app_ipc.h"
 
@@ -12,6 +10,6 @@
 #error "No icm40609 node found in devicetree"
 #endif
 
-void imu_thread(void);
+static void imu_thread(void);
 
 #endif /* IMU_THREAD_H */

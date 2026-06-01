@@ -9,6 +9,8 @@
 #define IMU_DATA_SLAB_ALIGNMENT 8   // Need 8 because data is dealing with int64_t
 #define AXIS_DATA_SLAB_NUM_BLOCKS 16
 #define AXIS_DATA_SLAB_ALIGNMENT 8
+#define BLE_DATA_SLAB_NUM_BLOCKS 16
+#define BLE_DATA_SLAB_ALIGNMENT 4
 
 /** Thread coordination */
 #define ADC_THREAD_READY BIT(0)
@@ -39,7 +41,7 @@ struct axis_data
 /**
  * @brief Struct containing relevant info from IMU
  *
- * @param gyro_z Gyro angular vel in Z-dir [ dps ]
+ * @param gyro_z  Gyro angular vel in Z-dir [ dps ]
  * @param accel_x Acceleration in X-dir [ g ]
  * @param accel_y Acceleration in Y-dir [ g ]
  * @param ts Timestamp. Millis since boot [ ms ]
@@ -52,11 +54,25 @@ struct imu_data_t
     int64_t ts;    // Timestamp. Millis since boot [ ms ]
 };
 
+/**
+ * @brief Struct containing data to be sent via BLE
+ *
+ * @param power Estimated power output at cranks [W]
+ * @param rpm   Estimated crank speed [rpm]
+ */
+struct ble_data_t
+{
+    uint16_t power; // Estimated power output [W]
+    uint16_t rpm;   // Estimated crank speed [RPM]
+};
+
 extern struct k_event thread_sync_event;
 extern struct k_fifo axis_fifo;
 extern struct k_mem_slab axis_data_slab;
 extern struct k_fifo imu_fifo;
-extern struct k_fifo printk_fifo;
 extern struct k_mem_slab imu_data_slab;
+extern struct k_fifo ble_fifo;
+extern struct k_mem_slab ble_data_slab;
+extern struct k_fifo printk_fifo;
 
 #endif /* APP_IPC_H */

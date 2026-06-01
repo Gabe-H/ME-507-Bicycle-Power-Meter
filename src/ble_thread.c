@@ -8,6 +8,11 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
     .recycled = recycled_cb,
 };
 
+K_MEM_SLAB_DEFINE(ble_data_slab,
+                  sizeof(struct ble_data_t),
+                  BLE_DATA_SLAB_NUM_BLOCKS,
+                  BLE_DATA_SLAB_ALIGNMENT);
+
 static void adv_work_handler(struct k_work *work)
 {
     int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));

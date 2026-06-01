@@ -31,7 +31,7 @@ int icm_init(icm_t *icm)
     int ret;
     uint8_t whoami = 0;
 
-    printk("ICM-40609 WHO_AM_I test starting...\n");
+    LOG_DBG("ICM-40609 WHO_AM_I test starting...\n");
 
     if (!device_is_ready(icm->bus))
     {

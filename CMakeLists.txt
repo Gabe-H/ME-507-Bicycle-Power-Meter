@@ -7,6 +7,7 @@ project(ME-507-Power-Meter)
 add_subdirectory(lib/icm40609)
 add_subdirectory(lib/max17048)
 add_subdirectory(lib/ble)
+add_subdirectory(lib/eekf)
 
 target_sources(app PRIVATE
     src/main.c

@@ -6,8 +6,6 @@
 #include <zephyr/drivers/adc.h>
 #include <zephyr/input/input.h>
 #include <stdio.h>
-// #include <zephyr/device.h>
-// #include <zephyr/devicetree.h>
 #include "app_ipc.h"
 
 static void adc_thread(void);
