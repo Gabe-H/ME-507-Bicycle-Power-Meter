@@ -13,4 +13,5 @@ target_sources(app PRIVATE
     src/imu_task.c
     src/adc_task.c
     src/filter_task.c
+    src/battery_task.c
 )

@@ -22,18 +22,10 @@
 
 // Peripherals
 #include "app_ipc.h"
-#include "max17048.h"
-#include "imu_task.h"
 
-// #include <math.h>
 /** END INCLUDES **/
 
 /** BEGIN PERIPHERAL CONFIGURATION **/
-
-#if !DT_NODE_EXISTS(MAX17048_NODE)
-#error "No MAX17048 battery monitor node found in devicetree"
-#endif
-batt_mon_t batt_mon = I2C_DT_SPEC_GET(MAX17048_NODE);
 
 /** END PERIPHERAL CONFIGURATION */
 
@@ -41,36 +33,6 @@ batt_mon_t batt_mon = I2C_DT_SPEC_GET(MAX17048_NODE);
 
 /** Logger configuration **/
 LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
-
-/**
- * @brief RTOS Task for battery monitoring
- *
- */
-void battery_monitor_task(void)
-{
-
-    if (battery_monitor_init(&batt_mon)) // return 0 when properly configured
-    {
-        return;
-    }
-
-    while (1)
-    {
-        // uint8_t pct = battery_monitor_read_soc(&batt_mon);
-
-        // char *mem_ptr = k_malloc(32);
-        // sprintf(mem_ptr, "Battery SOC: %d%%", pct);
-        // k_fifo_put(&printk_fifo, mem_ptr);
-
-        uint16_t volts = battery_monitor_read_voltage(&batt_mon); // Value is returned in millivolts
-
-        char *mem_ptr = k_malloc(32);
-        sprintf(mem_ptr, "Battery voltage: %dmV", volts);
-        k_fifo_put(&printk_fifo, mem_ptr);
-
-        k_sleep(K_SECONDS(5));
-    }
-}
 
 /**
  * @brief RTOS Task for sending messages to RTT terminal
@@ -89,7 +51,6 @@ void rtt_task(void)
 }
 
 /** Thread creation **/
-K_THREAD_DEFINE(battery_task_id, STACKSIZE, battery_monitor_task, NULL, NULL, NULL, 7, 0, 0);
 K_THREAD_DEFINE(rtt_task_id, STACKSIZE, rtt_task, NULL, NULL, NULL, 7, 0, 0);
 
 /** Register ADC axis callback **/
