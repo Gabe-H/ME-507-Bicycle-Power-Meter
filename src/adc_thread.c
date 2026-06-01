@@ -27,6 +27,12 @@ K_MEM_SLAB_DEFINE(axis_data_slab,
  */
 static void adc_thread(void)
 {
+    // Post READY bit to sync event share
+    k_event_post(&thread_sync_event, ADC_THREAD_READY);
+
+    // Continue to main loop after START bit received
+    k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
+
     /* Main loop: read axis values from callback queue and print */
     while (1)
     {

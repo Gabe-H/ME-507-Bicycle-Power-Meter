@@ -10,6 +10,20 @@
 #define AXIS_DATA_SLAB_NUM_BLOCKS 16
 #define AXIS_DATA_SLAB_ALIGNMENT 8
 
+/** Thread coordination */
+#define ADC_THREAD_READY BIT(0)
+#define BATTERY_THREAD_READY BIT(1)
+#define BLE_THREAD_READY BIT(2)
+#define FILTER_THREAD_READY BIT(3)
+#define IMU_THREAD_READY BIT(4)
+#define RTT_THREAD_READY BIT(5)
+
+#define ALL_READY (ADC_THREAD_READY | BATTERY_THREAD_READY | \
+                   BLE_THREAD_READY | FILTER_THREAD_READY |  \
+                   IMU_THREAD_READY | RTT_THREAD_READY)
+
+#define START_BIT BIT(6) // START BIT is 1 higher than highest thread bit
+
 /** Axis data FIFO for queuing mapped axis values from callback **/
 
 /**
@@ -38,6 +52,7 @@ struct imu_data_t
     int64_t ts;    // Timestamp. Millis since boot [ ms ]
 };
 
+extern struct k_event thread_sync_event;
 extern struct k_fifo axis_fifo;
 extern struct k_mem_slab axis_data_slab;
 extern struct k_fifo imu_fifo;

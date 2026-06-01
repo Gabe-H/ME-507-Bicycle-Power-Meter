@@ -80,6 +80,12 @@ static void cps_notify_thread(void)
     k_work_init(&adv_work, adv_work_handler);
     advertising_start();
 
+    // Post READY bit to sync event share
+    k_event_post(&thread_sync_event, BLE_THREAD_READY);
+
+    // Continue to main loop after START bit received
+    k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
+
     while (1)
     {
         if (peripheral_connected)

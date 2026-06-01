@@ -19,10 +19,17 @@ void imu_thread(void)
 {
     if (icm_init(&icm)) // return 0 when properly configured
     {
+        k_event_post(&thread_sync_event, IMU_THREAD_READY);
         return;
     }
 
     LOG_INF("IMU configured.");
+
+    // Post READY bit to sync event share
+    k_event_post(&thread_sync_event, IMU_THREAD_READY);
+
+    // Continue to main loop after START bit received
+    k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
 
     while (1)
     {

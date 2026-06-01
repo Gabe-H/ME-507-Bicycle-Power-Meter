@@ -31,6 +31,11 @@ LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
  */
 void rtt_thread(void)
 {
+    // Post READY bit to sync event share
+    k_event_post(&thread_sync_event, RTT_THREAD_READY);
+
+    // Continue to main loop after START bit received
+    k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
     while (1)
     {
         char *rx_data = k_fifo_get(&printk_fifo, K_FOREVER);
@@ -38,6 +43,33 @@ void rtt_thread(void)
         puts(rx_data);
         k_free(rx_data);
     }
+}
+
+/**
+ * @brief Main thread. Coordinates tasks before allowing them to enter their loops
+ *
+ */
+int main(void)
+{
+    // Wait for all READY bit flags to be set
+    // k_event_wait_all(&thread_sync_event, ALL_READY, false, K_FOREVER);
+    uint32_t events = k_event_wait_all(
+        &thread_sync_event,
+        ALL_READY,
+        false,
+        K_SECONDS(5));
+
+    if ((events & ALL_READY) != ALL_READY)
+    {
+        LOG_ERR("Not all threads became ready. Got 0x%08X", events);
+    }
+
+    // Notify tasks to continue by setting START bit
+    k_event_post(&thread_sync_event, START_BIT);
+
+    LOG_INF("Start bit sent to all threads");
+
+    return 0;
 }
 
 K_THREAD_DEFINE(rtt_thread_id, STACKSIZE, rtt_thread, NULL, NULL, NULL, 7, 0, 0);

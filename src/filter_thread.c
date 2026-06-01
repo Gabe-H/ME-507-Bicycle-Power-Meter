@@ -6,6 +6,12 @@
  */
 void filter_thread(void)
 {
+    // Post READY bit to sync event share
+    k_event_post(&thread_sync_event, FILTER_THREAD_READY);
+
+    // Continue to main loop after START bit received
+    k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
+
     while (1)
     {
         struct imu_data_t *data = k_fifo_get(&imu_fifo, K_FOREVER);

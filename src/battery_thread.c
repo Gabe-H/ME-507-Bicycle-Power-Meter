@@ -13,8 +13,17 @@ static void battery_monitor_thread(void)
 
     if (battery_monitor_init(&batt_mon)) // return 0 when properly configured
     {
+        // Post READY bit to sync event share
+        k_event_post(&thread_sync_event, BATTERY_THREAD_READY);
+
         return;
     }
+
+    // Post READY bit to sync event share
+    k_event_post(&thread_sync_event, BATTERY_THREAD_READY);
+
+    // Continue to main loop after START bit received
+    k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
 
     while (1)
     {
