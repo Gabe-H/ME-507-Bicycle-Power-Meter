@@ -59,6 +59,7 @@ int main(void)
         false,
         K_SECONDS(5));
 
+    // Log error if not all threads started in time
     if ((events & ALL_READY) != ALL_READY)
     {
         LOG_ERR("Not all threads became ready. Got 0x%08X", events);
@@ -67,9 +68,9 @@ int main(void)
     // Notify tasks to continue by setting START bit
     k_event_post(&thread_sync_event, START_BIT);
 
-    LOG_INF("Start bit sent to all threads");
+    LOG_DBG("Start bit sent to all threads");
 
-    return 0;
+    return 0; // Main thread no longer needed
 }
 
 K_THREAD_DEFINE(rtt_thread_id, STACKSIZE, rtt_thread, NULL, NULL, NULL, 7, 0, 0);
