@@ -6,6 +6,7 @@ project(Power_Meter_Breadboard)
 # add_subdirectory(lib/icm20948)
 add_subdirectory(lib/icm40609)
 add_subdirectory(lib/max17048)
+add_subdirectory(lib/ble)
 
 target_sources(app PRIVATE
     src/main.c
@@ -14,4 +15,5 @@ target_sources(app PRIVATE
     src/adc_task.c
     src/filter_task.c
     src/battery_task.c
+    src/ble_task.c
 )
