@@ -36,12 +36,25 @@
 #include <stdint.h>
 #include <math.h>
 
-// #define EEKF_MAT_LOG log
-// #define EEKF_MAT_SQRT sqrt
+#define EEKF_FLOAT_PRECISION 1 // 1: Single float precision. 2: Double float precision
+							   // Use single float if possible - nRF52832 has native single FPU
+
+#if (EEKF_FLOAT_PRECISION == 1)
+// Single float precision
 #define EEKF_MAT_LOG logf
 #define EEKF_MAT_SQRT sqrtf
+#define EEKF_MAT_SIN sinf
+#define EEKF_MAT_COS cosf
 #define EEKF_MAT_RAND rand
 #define EEKF_MAT_RAND_MAX RAND_MAX
+
+#elif (EEKF_FLOAT_PRECISION == 2)
+// Double float precision
+#define EEKF_MAT_LOG log
+#define EEKF_MAT_SQRT sqrt
+#define EEKF_MAT_SIN sin
+#define EEKF_MAT_COS cos
+#endif
 
 /// matrix value type (double)
 // typedef double eekf_value;

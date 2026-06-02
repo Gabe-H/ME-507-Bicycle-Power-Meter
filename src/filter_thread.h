@@ -8,17 +8,69 @@
 #include <math.h>
 #include <stdio.h>
 
-static void filter_thread(void);
+#define NX 5 // State dimension
+#define NZ 3 // Measurement dimension
+#define NU 1 // Input dimension; use it to pass dt
 
-/** Variables for Kalman */
-static eekf_value dT = 0.1;  // Time step duration
-static eekf_value s_w = 0.2; // Process noise standard deviation
-static eekf_value s_z = 10;  // Measurement noise standard deviation
+#define EEKF_DT 0.02F // dt [s]
+
+#define M_PI 3.14159
+
+/**
+ *  State vector, x
+ *
+ *  x[0] = theta     - Crank angle [rad]
+ *  x[1] = omega     - Crank angular velocity [rad/s]
+ *  x[2] = bg        - Gyro bias [rad/s]
+ *  x[3] = bax       - Accel x bias [m/s^2]
+ *  x[4] = bay       - Accel y bias [m/s^2]
+ *
+ */
+
+/**
+ * Measurement vector, z
+ *
+ *  z[0] = gyro_z     - Measured crank-axis gyro rate [rad/s]
+ *  z[1] = accel_x    - measured in-plane accel x [m/s^2]
+ *  z[2] = accel_y    - measured in-plane accel y [m/s^2]
+ */
+
+typedef struct
+{
+    eekf_value g; // gravity [m/s^2]
+
+    eekf_value rx; // IMU x-position from crank axis [m]
+    eekf_value ry; // IMU y-position from crank axis [m]
+
+    eekf_value sigma_alpha; // Angular acceleration process noise [rad/s^2]
+    eekf_value sigma_bg;    // Gyro bias random walk [rad/s/sqrt(s)]
+    eekf_value sigma_ba;    // Accel bias random walk [m/s^2/sqrt(s)]
+} crank_ekf_params_t;
+
+static eekf_context ekf_ctx;
+
+static crank_ekf_params_t ekf_params;
+
+static void crank_ekf_init(void);
+
+static void crank_ekf_update(eekf_value, eekf_value, eekf_value, eekf_value);
+
+static void filter_thread(void);
 
 static eekf_return transition(eekf_mat *xp, eekf_mat *Jf, eekf_mat const *x,
                               eekf_mat const *u, void *userData);
 
 static eekf_return measurement(eekf_mat *zp, eekf_mat *Jh, eekf_mat const *x,
                                void *userData);
+
+static void mat_zero(eekf_mat *);
+
+static eekf_value wrap_pi(eekf_value);
+
+static void set_diag(eekf_mat *, uint8_t, const eekf_value *);
+
+static void crank_update_Q(eekf_mat *, const crank_ekf_params_t *, eekf_value);
+
+static void crank_set_R(eekf_mat *);
 
 #endif /* FILTER_THREAD_H */
