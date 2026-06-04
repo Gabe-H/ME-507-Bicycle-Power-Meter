@@ -19,6 +19,7 @@ K_MEM_SLAB_DEFINE(axis_data_slab,
                   AXIS_DATA_SLAB_NUM_BLOCKS,
                   AXIS_DATA_SLAB_ALIGNMENT);
 
+// TODO: DELTE THIS THREAD. ALL INPUTS WILL BE HANDLED BY BUILT IN AXIS THREAD(s)
 /**
  * @brief Zephyr thread for reading values from the ADC
  *
@@ -33,22 +34,24 @@ static void adc_thread(void)
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
 
+    return;
+
     /* Main loop: read axis values from callback queue and print */
-    while (1)
-    {
-        /* Get axis data from FIFO with timeout to keep responsiveness */
-        struct axis_data *axis_msg = k_fifo_get(&axis_fifo, K_FOREVER);
-        if (axis_msg)
-        {
-            char *mem_ptr = k_malloc(64);
-            if (mem_ptr)
-            {
-                sprintf(mem_ptr, "Axis ch%d: %d", axis_msg->channel, (int)axis_msg->value);
-                k_fifo_put(&printk_fifo, mem_ptr);
-            }
-            k_mem_slab_free(&axis_data_slab, (void *)axis_msg);
-        }
-    }
+    // while (1)
+    // {
+    // /* Get axis data from FIFO with timeout to keep responsiveness */
+    // struct axis_data *axis_msg = k_fifo_get(&axis_fifo, K_FOREVER);
+    // if (axis_msg)
+    // {
+    //     char *mem_ptr = k_malloc(64);
+    //     if (mem_ptr)
+    //     {
+    //         sprintf(mem_ptr, "Axis ch%d: %d", axis_msg->channel, (int)axis_msg->value);
+    //         k_fifo_put(&printk_fifo, mem_ptr);
+    //     }
+    //     k_mem_slab_free(&axis_data_slab, (void *)axis_msg);
+    // }
+    // }
 }
 
 /**
@@ -68,17 +71,20 @@ static void input_evt_cb(struct input_event *evt, void *user_data)
     {
         LOG_DBG("Y-Axis value received: %d", evt->value);
 
-        struct axis_data *axis_msg;
-        if (k_mem_slab_alloc(&axis_data_slab, (void **)&axis_msg, K_NO_WAIT) == 0)
-        {
-            axis_msg->channel = 0;
-            axis_msg->value = evt->value; /* Already scaled/clamped by driver */
-            k_fifo_put(&axis_fifo, axis_msg);
-        }
-        else
-        {
-            LOG_WRN("Failed to allocate memory for axis slab item");
-        }
+        // struct axis_data *axis_msg;
+        // if (k_mem_slab_alloc(&axis_data_slab, (void **)&axis_msg, K_NO_WAIT) == 0)
+        // {
+        //     axis_msg->channel = 0;
+        //     axis_msg->value = evt->value; /* Already scaled/clamped by driver */
+        //     k_fifo_put(&axis_fifo, axis_msg);
+        // }
+        // else
+        // {
+        //     LOG_WRN("Failed to allocate memory for axis slab item");
+        // }
+        k_mutex_lock(&axis_latest_lock, K_FOREVER);
+        axis_latest_value = evt->value;
+        k_mutex_unlock(&axis_latest_lock);
     }
     else
     {

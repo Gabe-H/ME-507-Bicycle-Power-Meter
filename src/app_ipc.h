@@ -19,12 +19,14 @@
 #define FILTER_THREAD_READY BIT(3)
 #define IMU_THREAD_READY BIT(4)
 #define RTT_THREAD_READY BIT(5)
+#define PWR_THREAD_READY BIT(6)
 
 #define ALL_READY (ADC_THREAD_READY | BATTERY_THREAD_READY | \
                    BLE_THREAD_READY | FILTER_THREAD_READY |  \
-                   IMU_THREAD_READY | RTT_THREAD_READY)
+                   IMU_THREAD_READY | RTT_THREAD_READY |     \
+                   PWR_THREAD_READY)
 
-#define START_BIT BIT(6) // START BIT is 1 higher than highest thread bit
+#define START_BIT BIT(7) // START BIT is 1 higher than highest thread bit
 
 /** Axis data FIFO for queuing mapped axis values from callback **/
 
@@ -41,16 +43,22 @@ struct axis_data
 /**
  * @brief Struct containing relevant info from IMU
  *
- * @param gyro_z  Gyro angular vel in Z-dir [ dps ]
  * @param accel_x Acceleration in X-dir [ g ]
  * @param accel_y Acceleration in Y-dir [ g ]
+ * @param accel_z Acceleration in Z-dir [ g ]
+ * @param gyro_x  Gyro angular vel in X-dir [ dps ]
+ * @param gyro_y  Gyro angular vel in Y-dir [ dps ]
+ * @param gyro_z  Gyro angular vel in Z-dir [ dps ]
  * @param ts Timestamp. Millis since boot [ ms ]
  */
 struct imu_data_t
 {
-    float gyro_z;  // Gyro angular vel in Z-dir [ dps ]
     float accel_x; // Acceleration in X-dir [ g ]
     float accel_y; // Acceleration in Y-dir [ g ]
+    float accel_z; // Acceleration in Z-dir [ g ]
+    float gyro_x;  // Gyro angular vel in X-dir [ dps ]
+    float gyro_y;  // Gyro angular vel in Y-dir [ dps ]
+    float gyro_z;  // Gyro angular vel in Z-dir [ dps ]
     int64_t ts;    // Timestamp. Millis since boot [ ms ]
 };
 
@@ -66,13 +74,28 @@ struct ble_data_t
     uint16_t rpm;   // Estimated crank speed [RPM]
 };
 
+/**
+ * @brief Struct containing outputs from Kalman filter
+ *
+ */
+struct filter_data_t
+{
+    float theta; // Estimated angle [rad]
+    float omega; // Estimated omega [rad/s]
+    int64_t ts;  // Uptime timestamps [ms]
+};
+
 extern struct k_event thread_sync_event;
-extern struct k_fifo axis_fifo;
-extern struct k_mem_slab axis_data_slab;
 extern struct k_fifo imu_fifo;
 extern struct k_mem_slab imu_data_slab;
 extern struct k_fifo ble_fifo;
 extern struct k_mem_slab ble_data_slab;
+extern struct k_fifo filter_fifo;
+extern struct k_mem_slab filter_data_slab;
 extern struct k_fifo printk_fifo;
+
+extern struct k_mutex axis_latest_lock;
+// extern struct k_sem axis_latest_ready;
+extern int32_t axis_latest_value;
 
 #endif /* APP_IPC_H */

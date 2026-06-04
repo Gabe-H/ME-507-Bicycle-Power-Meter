@@ -1,9 +1,16 @@
 #include "filter_thread.h"
 
+K_MEM_SLAB_DEFINE(filter_data_slab,
+                  sizeof(struct filter_data_t),
+                  10,
+                  4);
+
 static crank_ekf_params_t ekf_params = {
     .g = M_GRAVITY,
-    .rx = 0.051, // Example x offset 51mm
-    .ry = 0.001, // Example y offset 1mm
+    // .rx = 0.051, // Example x offset 51mm
+    // .ry = 0.001, // Example y offset 1mm
+    .rx = 0.173, // Fake-a-crank
+    .ry = 0.012, // Fake-a-crank
     .sigma_alpha = 15.0,
     .sigma_bg = 0.003,
     .sigma_ba = 0.02,
@@ -100,6 +107,12 @@ static void crank_ekf_update(
  */
 static void filter_thread(void)
 {
+    // Init static variables for each loop
+    eekf_value ax;
+    eekf_value ay;
+    eekf_value gz;
+    eekf_value dt;
+
     // Kalman setup
     crank_ekf_init();
 
@@ -113,28 +126,45 @@ static void filter_thread(void)
 
     while (1)
     {
+        int64_t loop_start_ms = k_uptime_get();
+
         struct imu_data_t *data = k_fifo_get(&imu_fifo, K_FOREVER);
-        // eekf_value ax = data->accel_x;
-        // eekf_value ay = data->accel_y;
+        if (data)
+        {
+            // -- OPTIMAL CONFIGURATION: Board is actually in line with crank axis
+            // ax = data->accel_x;
+            // ay = data->accel_y;
+            // gz = data->gyro_z;
 
-        // Translate IMU axes such that +x faces outward from crank
-        // and +y faces upwards when crank is horizontal
-        eekf_value ax = data->accel_y;
-        eekf_value ay = -data->accel_x;
-        eekf_value gz = data->gyro_z;
+            // -- INTENDED CONFIGURATION: board top faces out from crank axis
+            //    (Gyro Z is rotation direction)
+            // Translate IMU axes such that +x faces outward from crank
+            // and +y faces upwards when crank is horizontal
+            // ax = data->accel_y;
+            // ay = -data->accel_x;
+            // gz = data->gyro_z;
 
-        // Unit conversions
-        ax *= M_GRAVITY;    // g -> m/s^2
-        ay *= M_GRAVITY;    // g -> m/s^2
-        gz *= DPS_TO_RAD_S; // dps -> rad/s
+            // -- ALTERNATE CONFIGURATION: board on side of crank
+            //    (-Gyro X is rotation direction)
+            ax = data->accel_y;
+            ay = -data->accel_z;
+            gz = -data->gyro_x;
 
-        // Get dt from readings
-        uint32_t dt_ms = (uint32_t)(data->ts - previous_ts);
-        previous_ts = data->ts;
-        eekf_value dt = (eekf_value)dt_ms / (eekf_value)1000.0F;
+            // Unit conversions
+            ax *= M_GRAVITY;    // g -> m/s^2
+            ay *= M_GRAVITY;    // g -> m/s^2
+            gz *= DPS_TO_RAD_S; // dps -> rad/s
 
-        // Release location on slab now that data has been processed
-        k_mem_slab_free(&imu_data_slab, (void *)data);
+            // Get dt from readings
+            uint32_t dt_ms = (uint32_t)(data->ts - previous_ts);
+            previous_ts = data->ts;
+            dt = (eekf_value)dt_ms / (eekf_value)1000.0F;
+
+            // Release location on slab now that data has been processed
+            k_mem_slab_free(&imu_data_slab, (void *)data);
+        }
+        else
+            continue; // Do not process if NULL data returned
 
         // Run an iteration of the kalman filter
         crank_ekf_update(
@@ -146,59 +176,28 @@ static void filter_thread(void)
         float angle = crank_get_angle_rad();
         float omega = crank_get_cadence_rpm();
 
-        // float raw_angle = 0;
-        // int state = 0;
+        struct filter_data_t *data_out;
 
-        // // Check if atan denominator is 0 first
-        // if (ax == 0.0F)
-        // {
-        //     if (ay < 0.0F)
-        //         raw_angle = 4.7124;
-        //     else
-        //         raw_angle = 1.5708;
-        // }
-        // else
-        // {
-        //     raw_angle = atanf(ay / ax);
+        if (k_mem_slab_alloc(&filter_data_slab, (void **)&data_out, K_MSEC(10)) == 0)
+        {
+            data_out->theta = angle;
+            data_out->omega = omega;
+            data_out->ts = loop_start_ms;
 
-        //     // Arctan truth table.
-        //     // Theta=0 when IMU x axis is facing upwards
-        //     if (ax > 0.0F && ay > 0.0F)
-        //     {
-        //         state = 1;
-        //         raw_angle = 3.1415F - raw_angle;
-        //     }
+            k_fifo_put(&filter_fifo, data_out);
+        }
+        else
+        {
+            // LOG_WRN("Warning: Couldn't allocate space on slab");
+        }
 
-        //     else if (ax > 0.0F && ay <= 0.0F)
-        //     {
-        //         state = 2;
-        //         raw_angle = 3.1415F - raw_angle;
-        //     }
-        //     else if (ax < 0.0F && ay >= 0.0F)
-        //     {
-        //         state = 3;
-        //         raw_angle = -raw_angle;
-        //     }
-        //     else if (ax < 0.0F && ay < 0.0F)
-        //     {
-        //         raw_angle = 6.2831F - raw_angle;
-        //     }
-        // }
-
-        // char *mem_ptr = k_malloc(100);
-
-        // // sprintf(mem_ptr, "Angle: %f", angle);
-        // sprintf(mem_ptr, "X: %.2f, Y: %.2f, rawtheta: %.2f, theta: %.2f, omega: %.2f",
-        //         (double)ax, (double)ay, (double)raw_angle, (double)angle, (double)omega);
-
-        // k_fifo_put(&printk_fifo, mem_ptr);
-
-        // char *mem_ptr = k_malloc(50);
-
-        // // sprintf(mem_ptr, "Angle: %f", angle);
-        // sprintf(mem_ptr, "X: %.2f, Y: %.2f, theta: %.2f, [%d]", (double)data->accel_x, (double)data->accel_y, (double)angle, state);
-
-        // k_fifo_put(&printk_fifo, mem_ptr);
+        /**
+         * Only ONE task should be the master of update timing.
+         * If the IMU sends data at a fixed rate, DO NOT wait here.
+         * If the IMU does not send data at a fixed rate, OD wait here.
+         */
+        // int64_t remaining_ms = FILTER_PERIOD - k_uptime_delta(&loop_start_ms);
+        // k_sleep(K_MSEC(remaining_ms));
     }
 }
 
@@ -278,18 +277,18 @@ static eekf_return measurement(eekf_mat *zp, eekf_mat *Jh, eekf_mat const *x,
     mat_zero(Jh);
 
     // gyro row
-    *EEKF_MAT_EL(*Jh, 0, 1) = 1.0;
-    *EEKF_MAT_EL(*Jh, 0, 2) = 1.0;
+    *EEKF_MAT_EL(*Jh, 0, 1) = 1.0F;
+    *EEKF_MAT_EL(*Jh, 0, 2) = 1.0F;
 
     // accel x row
     *EEKF_MAT_EL(*Jh, 1, 0) = p->g * c;
-    *EEKF_MAT_EL(*Jh, 1, 1) = -2.0 * omega * p->rx;
-    *EEKF_MAT_EL(*Jh, 1, 3) = 1.0;
+    *EEKF_MAT_EL(*Jh, 1, 1) = -2.0F * omega * p->rx;
+    *EEKF_MAT_EL(*Jh, 1, 3) = 1.0F;
 
     // accel y row
     *EEKF_MAT_EL(*Jh, 2, 0) = -p->g * s;
-    *EEKF_MAT_EL(*Jh, 2, 1) = -2.0 * omega * p->ry;
-    *EEKF_MAT_EL(*Jh, 2, 4) = 1.0;
+    *EEKF_MAT_EL(*Jh, 2, 1) = -2.0F * omega * p->ry;
+    *EEKF_MAT_EL(*Jh, 2, 4) = 1.0F;
 
     return eEekfReturnOk;
 }
@@ -307,7 +306,7 @@ static void mat_zero(eekf_mat *m)
     {
         for (uint8_t r = 0; r < m->rows; r++)
         {
-            *EEKF_MAT_EL(*m, r, c) = 0.0;
+            *EEKF_MAT_EL(*m, r, c) = 0.0F;
         }
     }
 }
@@ -322,11 +321,11 @@ static eekf_value wrap_pi(eekf_value a)
 {
     while (a > M_PI)
     {
-        a -= 2.0 * M_PI;
+        a -= 2.0F * M_PI;
     }
     while (a < -M_PI)
     {
-        a += 2.0 * M_PI;
+        a += 2.0F * M_PI;
     }
     return a;
 }

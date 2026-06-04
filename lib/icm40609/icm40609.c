@@ -175,7 +175,7 @@ int icm_init_gyro(icm_t *icm)
     if (ret)
         return 1;
 
-    ret = icm_reg_write(icm, ICM_REG_GYRO_CONFIG0, 0b00100110);
+    ret = icm_reg_write(icm, ICM_REG_GYRO_CONFIG0, ICM_GYRO_CONFIG0_VALUE);
     if (ret)
         return 2;
 
@@ -203,7 +203,7 @@ int icm_init_accel(icm_t *icm)
         return 1;
 
     // Set accel scale range (+/- 8g, 1kHz)
-    ret = icm_reg_write(icm, ICM_REG_ACCEL_CONFIG0, 0b01000110);
+    ret = icm_reg_write(icm, ICM_REG_ACCEL_CONFIG0, ICM_ACCEL_CONFIG0_VALUE);
     if (ret)
         return 2;
 
@@ -258,9 +258,9 @@ int icm_read_gyro(icm_t *icm, float *x, float *y, float *z)
     if (ret)
         return 1;
 
-    *x = ((float)g.x * ICM_GYRO_SCALE_FACTOR_1000DPS);
-    *y = ((float)g.y * ICM_GYRO_SCALE_FACTOR_1000DPS);
-    *z = ((float)g.z * ICM_GYRO_SCALE_FACTOR_1000DPS);
+    *x = ((float)g.x * ICM_GYRO_SCALE_FACTOR);
+    *y = ((float)g.y * ICM_GYRO_SCALE_FACTOR);
+    *z = ((float)g.z * ICM_GYRO_SCALE_FACTOR);
 
     return ret;
 }
@@ -311,9 +311,9 @@ int icm_read_accel(icm_t *icm, float *x, float *y, float *z)
     if (ret)
         return 1;
 
-    *x = ((float)a.x * ICM_ACCEL_SCALE_FACTOR_8G);
-    *y = ((float)a.y * ICM_ACCEL_SCALE_FACTOR_8G);
-    *z = ((float)a.z * ICM_ACCEL_SCALE_FACTOR_8G);
+    *x = ((float)a.x * ICM_ACCEL_SCALE_FACTOR);
+    *y = ((float)a.y * ICM_ACCEL_SCALE_FACTOR);
+    *z = ((float)a.z * ICM_ACCEL_SCALE_FACTOR);
 
     return ret;
 }

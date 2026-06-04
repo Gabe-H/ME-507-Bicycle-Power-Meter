@@ -93,33 +93,34 @@ static void cps_notify_thread(void)
 
     while (1)
     {
+        // Only send data if we're connected to a host
         if (peripheral_connected)
         {
-            /* Update power value: ramp from 150W to 350W over 60s cycle */
-            if (power_direction == 1U)
-            {
-                power_watts += 10U; /* Increase by 10W per notification (~1.1s apart) */
-                if (power_watts >= 350U)
-                {
-                    power_watts = 350U;
-                    power_direction = 0U; /* Switch to decreasing */
-                }
-            }
-            else
-            {
-                power_watts -= 10U; /* Decrease by 10W per notification */
-                if (power_watts <= 150U)
-                {
-                    power_watts = 150U;
-                    power_direction = 1U; /* Switch to increasing */
-                }
-            }
+            // /* Update power value: ramp from 150W to 350W over 60s cycle */
+            // if (power_direction == 1U)
+            // {
+            //     power_watts += 10U; /* Increase by 10W per notification (~1.1s apart) */
+            //     if (power_watts >= 350U)
+            //     {
+            //         power_watts = 350U;
+            //         power_direction = 0U; /* Switch to decreasing */
+            //     }
+            // }
+            // else
+            // {
+            //     power_watts -= 10U; /* Decrease by 10W per notification */
+            //     if (power_watts <= 150U)
+            //     {
+            //         power_watts = 150U;
+            //         power_direction = 1U; /* Switch to increasing */
+            //     }
+            // }
 
-            /* Update crank data: simulate 90 RPM cadence */
-            /* 90 RPM = 1.5 revolutions per second */
-            /* At 1.1s intervals: 1.5 * 1.1 = 1.65 revolutions per update */
-            crank_revolutions++;
-            crank_event_time += (1024 * 1100 / 1000); /* ~1.1s in 1/1024 second units */
+            // /* Update crank data: simulate 90 RPM cadence */
+            // /* 90 RPM = 1.5 revolutions per second */
+            // /* At 1.1s intervals: 1.5 * 1.1 = 1.65 revolutions per update */
+            // crank_revolutions++;
+            // crank_event_time += (1024 * 1100 / 1000); /* ~1.1s in 1/1024 second units */
 
             /* Send power data via CPS */
             if (bt_cps_notify(power_watts, crank_revolutions, crank_event_time))

@@ -47,13 +47,18 @@ static void imu_thread(void)
         }
         else
         {
+
+            // Upon successful data read, send to memory slab (for filter to pick up)
             struct imu_data_t *data;
 
             if (k_mem_slab_alloc(&imu_data_slab, (void **)&data, K_MSEC(100)) == 0)
             {
+                data->gyro_x = gx;
+                data->gyro_y = gy;
+                data->gyro_z = gz;
                 data->accel_x = ax;
                 data->accel_y = ay;
-                data->gyro_z = gz;
+                data->accel_z = az;
                 data->ts = k_uptime_get();
 
                 k_fifo_put(&imu_fifo, data);
@@ -71,7 +76,7 @@ static void imu_thread(void)
             // LOG_INF("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g", gx, gy, gz, ax, ay, az);
         }
 
-        k_sleep(K_MSEC(50));
+        k_sleep(K_MSEC(IMU_PERIOD));
     }
 }
 

@@ -9,6 +9,81 @@
 /* ICM-40609 registers */
 #define ICM40609_WHO_AM_I_VAL 0x3B
 
+/*
+ * Default IMU configuration.
+ * Change these selection macros to update both the register bytes and the
+ * floating-point scaling used by the read helpers.
+ */
+#define ICM_GYRO_FS_SEL_2000DPS 0x00
+#define ICM_GYRO_FS_SEL_1000DPS 0x01
+#define ICM_GYRO_FS_SEL_500DPS 0x02
+#define ICM_GYRO_FS_SEL_250DPS 0x03
+#define ICM_GYRO_FS_SEL_125DPS 0x04
+#define ICM_GYRO_FS_SEL_625DPS 0x05
+#define ICM_GYRO_FS_SEL_3125DPS 0x06
+#define ICM_GYRO_FS_SEL_15625DPS 0x07
+
+#define ICM_GYRO_ODR_32KHZ 0x01
+#define ICM_GYRO_ODR_16KHZ 0x02
+#define ICM_GYRO_ODR_8KHZ 0x03
+#define ICM_GYRO_ODR_4KHZ 0x04
+#define ICM_GYRO_ODR_2KHZ 0x05
+#define ICM_GYRO_ODR_1KHZ 0x06
+#define ICM_GYRO_ODR_200HZ 0x07
+#define ICM_GYRO_ODR_100HZ 0x08
+#define ICM_GYRO_ODR_50HZ 0x09
+#define ICM_GYRO_ODR_25HZ 0x0A
+#define ICM_GYRO_ODR_12_5HZ 0x0B
+#define ICM_GYRO_ODR_500HZ 0x0F
+
+#define ICM_GYRO_SCALE_FACTOR_2000DPS 0.06097561f
+#define ICM_GYRO_SCALE_FACTOR_1000DPS 0.03048780f
+#define ICM_GYRO_SCALE_FACTOR_500DPS 0.01524390f
+#define ICM_GYRO_SCALE_FACTOR_250DPS 0.00762195f
+#define ICM_GYRO_SCALE_FACTOR_125DPS 0.00381098f
+#define ICM_GYRO_SCALE_FACTOR_625DPS 0.00190549f
+#define ICM_GYRO_SCALE_FACTOR_3125DPS 0.00095274f
+#define ICM_GYRO_SCALE_FACTOR_15625DPS 0.00047637f
+
+#define ICM_GYRO_FS_SEL_DEFAULT ICM_GYRO_FS_SEL_1000DPS
+#define ICM_GYRO_ODR_DEFAULT ICM_GYRO_ODR_100HZ
+#define ICM_GYRO_SCALE_FACTOR ICM_GYRO_SCALE_FACTOR_1000DPS
+#define ICM_GYRO_CONFIG0_VALUE (((ICM_GYRO_FS_SEL_DEFAULT & 0x07) << 5) | (ICM_GYRO_ODR_DEFAULT & 0x0F))
+
+#define ICM_ACCEL_FS_SEL_32G 0x00
+#define ICM_ACCEL_FS_SEL_16G 0x01
+#define ICM_ACCEL_FS_SEL_8G 0x02
+#define ICM_ACCEL_FS_SEL_4G 0x03
+
+#define ICM_ACCEL_ODR_32KHZ 0x01
+#define ICM_ACCEL_ODR_16KHZ 0x02
+#define ICM_ACCEL_ODR_8KHZ 0x03
+#define ICM_ACCEL_ODR_4KHZ 0x04
+#define ICM_ACCEL_ODR_2KHZ 0x05
+#define ICM_ACCEL_ODR_1KHZ 0x06
+#define ICM_ACCEL_ODR_200HZ 0x07
+#define ICM_ACCEL_ODR_100HZ 0x08
+#define ICM_ACCEL_ODR_50HZ 0x09
+#define ICM_ACCEL_ODR_25HZ 0x0A
+#define ICM_ACCEL_ODR_12_5HZ 0x0B
+#define ICM_ACCEL_ODR_6_25HZ 0x0C
+#define ICM_ACCEL_ODR_3_125HZ 0x0D
+#define ICM_ACCEL_ODR_1_5625HZ 0x0E
+#define ICM_ACCEL_ODR_500HZ 0x0F
+
+#define ICM_ACCEL_SCALE_FACTOR_32G 0.00097656f
+#define ICM_ACCEL_SCALE_FACTOR_16G 0.00048828f
+#define ICM_ACCEL_SCALE_FACTOR_8G 0.00024414f
+#define ICM_ACCEL_SCALE_FACTOR_4G 0.00012207f
+
+/**
+ * SET GYRO & ACCEL DEFAULT CONFIGURATION OPTIONS HERE
+ */
+#define ICM_ACCEL_FS_SEL_DEFAULT ICM_ACCEL_FS_SEL_8G
+#define ICM_ACCEL_ODR_DEFAULT ICM_ACCEL_ODR_100HZ
+#define ICM_ACCEL_SCALE_FACTOR ICM_ACCEL_SCALE_FACTOR_8G
+#define ICM_ACCEL_CONFIG0_VALUE (((ICM_ACCEL_FS_SEL_DEFAULT & 0x07) << 5) | (ICM_ACCEL_ODR_DEFAULT & 0x0F))
+
 // Registers in Bank 0
 #define ICM_REG_DEVICE_CONFIG 0x11 // 7:5 Reserved
                                    // 4   SPI_MODE (leave default)
@@ -25,18 +100,15 @@
                                    // 1:0 ACCEL_MODE (00: off, 01: off, 10: low-power, 11: low-noise) [11]
 #define ICM_REG_GYRO_CONFIG0 0x4F  // 7:5 GYRO_FS_SEL (000-111: 2000, 1000, 500, 250, 125, 62.5, 31.25, 15.625dps) [001 - 1000dps]
                                    // 4:  Reserved
-                                   // 3:0 GYRO_ODR (0000-1111: Rsrvd, 32k, 16k, 8k, 4k, 2k, 1k, 200, 100, 50, 25, 12.5, R, R, R, 500) [0110 - 100Hz]
+                                   // 3:0 GYRO_ODR (0000-1111: Rsrvd, 32k, 16k, 8k, 4k, 2k, 1k, 200, 100, 50, 25, 12.5, R, R, R, 500) [1000 - 100Hz]
 #define ICM_REG_ACCEL_CONFIG0 0x50 // 7:5 ACCEL_FS_SEL (000-111: 32g 16g, 8g, 4g, R, R, R, R) [010 - 8g]
                                    // 4 Reserved
-                                   // 3:0 ACCEL_ODR (0000-1111 Rsrvd, 32k, 16k, 8k, 4k, 2k, 1k, 200, 100, 50, 25, 12.5, 6.25, 3.125, 1.5625, 500) [0110 - 1k]
+                                   // 3:0 ACCEL_ODR (0000-1111 Rsrvd, 32k, 16k, 8k, 4k, 2k, 1k, 200, 100, 50, 25, 12.5, 6.25, 3.125, 1.5625, 500) [1000 - 100Hz]
 #define ICM_REG_WHO_AM_I 0x75
 #define ICM_REG_BANK_SEL 0x76
 
 #define ICM_ACCEL_DATA_SIZE 6
 #define ICM_GYRO_DATA_SIZE 6
-
-#define ICM_GYRO_SCALE_FACTOR_1000DPS (0.03049f) // 1/32.8
-#define ICM_ACCEL_SCALE_FACTOR_8G (0.00024414f)  // 1/4096 LSB/g
 
 // Registers in Bank 1
 #define ICM_REG_SENSOR_CONFIG0 0x03      // 7:6 Reserved

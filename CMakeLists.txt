@@ -17,4 +17,5 @@ target_sources(app PRIVATE
     src/filter_thread.c
     src/battery_thread.c
     src/ble_thread.c
+    src/power_meas.c
 )

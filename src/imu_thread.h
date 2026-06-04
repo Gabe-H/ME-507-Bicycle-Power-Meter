@@ -10,6 +10,8 @@
 #error "No icm40609 node found in devicetree"
 #endif
 
+#define IMU_PERIOD 25 // IMU data update period in milliseconds
+
 static void imu_thread(void);
 
 #endif /* IMU_THREAD_H */

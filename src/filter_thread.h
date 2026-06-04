@@ -18,6 +18,8 @@
 
 #define DPS_TO_RAD_S 0.017453F
 
+#define FILTER_PERIOD 25 // Update period in ms
+
 /**
  *  State vector, x
  *
