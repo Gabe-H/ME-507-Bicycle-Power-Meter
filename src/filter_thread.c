@@ -1,9 +1,9 @@
 #include "filter_thread.h"
 
 static crank_ekf_params_t ekf_params = {
-    .g = 9.80665,
-    .rx = 0.05, // Example x offset 50mm
-    .ry = 0.0,  // Example y offset 0mm
+    .g = M_GRAVITY,
+    .rx = 0.051, // Example x offset 51mm
+    .ry = 0.001, // Example y offset 1mm
     .sigma_alpha = 15.0,
     .sigma_bg = 0.003,
     .sigma_ba = 0.02,
@@ -28,7 +28,7 @@ static EEKF_DECL_MAT_INIT(P, NX, NX,
                           0, 0, 0, 0, 0.25);
 
 /* Input u (only dt) */
-static EEKF_DECL_MAT_INIT(u, NU, 1, EEKF_DT);
+static EEKF_DECL_MAT_INIT(u, NU, 1, 0.05); // Begin with dt=0.05s
 
 /* Process nosie Q, filled each sample because it depends on dt */
 static EEKF_DECL_MAT_INIT(Q, NX, NX);
@@ -101,6 +101,7 @@ static void crank_ekf_update(
 static void filter_thread(void)
 {
     // Kalman setup
+    crank_ekf_init();
 
     // Post READY bit to sync event share
     k_event_post(&thread_sync_event, FILTER_THREAD_READY);
@@ -108,61 +109,96 @@ static void filter_thread(void)
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
 
+    previous_ts = k_uptime_get();
+
     while (1)
     {
         struct imu_data_t *data = k_fifo_get(&imu_fifo, K_FOREVER);
-        float ax = data->accel_x;
-        float ay = data->accel_y;
+        // eekf_value ax = data->accel_x;
+        // eekf_value ay = data->accel_y;
 
+        // Translate IMU axes such that +x faces outward from crank
+        // and +y faces upwards when crank is horizontal
+        eekf_value ax = data->accel_y;
+        eekf_value ay = -data->accel_x;
+        eekf_value gz = data->gyro_z;
+
+        // Unit conversions
+        ax *= M_GRAVITY;    // g -> m/s^2
+        ay *= M_GRAVITY;    // g -> m/s^2
+        gz *= DPS_TO_RAD_S; // dps -> rad/s
+
+        // Get dt from readings
+        uint32_t dt_ms = (uint32_t)(data->ts - previous_ts);
+        previous_ts = data->ts;
+        eekf_value dt = (eekf_value)dt_ms / (eekf_value)1000.0F;
+
+        // Release location on slab now that data has been processed
         k_mem_slab_free(&imu_data_slab, (void *)data);
 
-        float angle = 0;
-        int state = 0;
+        // Run an iteration of the kalman filter
+        crank_ekf_update(
+            dt,
+            gz,
+            ax,
+            ay);
 
-        // Check if atan denominator is 0 first
-        if (ax == 0.0F)
-        {
-            if (ay < 0.0F)
-                angle = 4.7124;
-            else
-                angle = 1.5708;
-        }
-        else
-        {
-            angle = atanf(ay / ax);
+        float angle = crank_get_angle_rad();
+        float omega = crank_get_cadence_rpm();
 
-            // Arctan truth table.
-            // Theta=0 when IMU x axis is facing upwards
-            if (ax > 0.0F && ay > 0.0F)
-            {
-                state = 1;
-                angle = 3.1415F - angle;
-            }
+        // float raw_angle = 0;
+        // int state = 0;
 
-            else if (ax > 0.0F && ay <= 0.0F)
-            {
-                state = 2;
-                angle = 3.1415F - angle;
-            }
-            else if (ax < 0.0F && ay >= 0.0F)
-            {
-                state = 3;
-                angle = -angle;
-            }
-            else if (ax < 0.0F && ay < 0.0F)
-            {
-                angle = 6.2831F - angle;
-            }
+        // // Check if atan denominator is 0 first
+        // if (ax == 0.0F)
+        // {
+        //     if (ay < 0.0F)
+        //         raw_angle = 4.7124;
+        //     else
+        //         raw_angle = 1.5708;
+        // }
+        // else
+        // {
+        //     raw_angle = atanf(ay / ax);
 
-            // angle += 1.5708; // Offset due to IMU placement
-        }
+        //     // Arctan truth table.
+        //     // Theta=0 when IMU x axis is facing upwards
+        //     if (ax > 0.0F && ay > 0.0F)
+        //     {
+        //         state = 1;
+        //         raw_angle = 3.1415F - raw_angle;
+        //     }
 
-        char *mem_ptr = k_malloc(50);
+        //     else if (ax > 0.0F && ay <= 0.0F)
+        //     {
+        //         state = 2;
+        //         raw_angle = 3.1415F - raw_angle;
+        //     }
+        //     else if (ax < 0.0F && ay >= 0.0F)
+        //     {
+        //         state = 3;
+        //         raw_angle = -raw_angle;
+        //     }
+        //     else if (ax < 0.0F && ay < 0.0F)
+        //     {
+        //         raw_angle = 6.2831F - raw_angle;
+        //     }
+        // }
 
-        // sprintf(mem_ptr, "Angle: %f", angle);
-        sprintf(mem_ptr, "X: %.2f, Y: %.2f, theta: %.2f, [%d]", (double)data->accel_x, (double)data->accel_y, (double)angle, state);
+        // char *mem_ptr = k_malloc(100);
 
-        k_fifo_put(&printk_fifo, mem_ptr);
+        // // sprintf(mem_ptr, "Angle: %f", angle);
+        // sprintf(mem_ptr, "X: %.2f, Y: %.2f, rawtheta: %.2f, theta: %.2f, omega: %.2f",
+        //         (double)ax, (double)ay, (double)raw_angle, (double)angle, (double)omega);
+
+        // k_fifo_put(&printk_fifo, mem_ptr);
+
+        // char *mem_ptr = k_malloc(50);
+
+        // // sprintf(mem_ptr, "Angle: %f", angle);
+        // sprintf(mem_ptr, "X: %.2f, Y: %.2f, theta: %.2f, [%d]", (double)data->accel_x, (double)data->accel_y, (double)angle, state);
+
+        // k_fifo_put(&printk_fifo, mem_ptr);
     }
 }
 
@@ -277,7 +313,7 @@ static void mat_zero(eekf_mat *m)
 }
 
 /**
- * @brief Ensure eekf_value is between 0-2pi
+ * @brief Ensure eekf_value is between -pi to +pi
  *
  * @param a value to be wrapped
  * @return eekf_value
@@ -353,6 +389,22 @@ static void crank_set_R(eekf_mat *R)
     *EEKF_MAT_EL(*R, 0, 0) = sigma_g * sigma_g;
     *EEKF_MAT_EL(*R, 1, 1) = sigma_a * sigma_a;
     *EEKF_MAT_EL(*R, 2, 2) = sigma_a * sigma_a;
+}
+
+static eekf_value crank_get_angle_rad(void)
+{
+    return *EEKF_MAT_EL(x, 0, 0);
+}
+
+static eekf_value crank_get_omega_rad_s(void)
+{
+    return *EEKF_MAT_EL(x, 1, 0);
+}
+
+static eekf_value crank_get_cadence_rpm(void)
+{
+    const eekf_value omega = crank_get_omega_rad_s();
+    return omega * (eekf_value)60.0F / ((eekf_value)2.0F * M_PI);
 }
 
 K_THREAD_DEFINE(filter_thread_id, STACKSIZE, filter_thread, NULL, NULL, NULL, 6, 0, 0);

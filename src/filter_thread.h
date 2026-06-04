@@ -12,9 +12,11 @@
 #define NZ 3 // Measurement dimension
 #define NU 1 // Input dimension; use it to pass dt
 
-#define EEKF_DT 0.02F // dt [s]
+#define M_PI 3.14159F
 
-#define M_PI 3.14159
+#define M_GRAVITY 9.80665F
+
+#define DPS_TO_RAD_S 0.017453F
 
 /**
  *  State vector, x
@@ -51,6 +53,8 @@ static eekf_context ekf_ctx;
 
 static crank_ekf_params_t ekf_params;
 
+static uint64_t previous_ts; // Previous uptime in ms
+
 static void crank_ekf_init(void);
 
 static void crank_ekf_update(eekf_value, eekf_value, eekf_value, eekf_value);
@@ -72,5 +76,11 @@ static void set_diag(eekf_mat *, uint8_t, const eekf_value *);
 static void crank_update_Q(eekf_mat *, const crank_ekf_params_t *, eekf_value);
 
 static void crank_set_R(eekf_mat *);
+
+static eekf_value crank_get_angle_rad(void);
+
+static eekf_value crank_get_omega_rad_s(void);
+
+static eekf_value crank_get_cadence_rpm(void);
 
 #endif /* FILTER_THREAD_H */

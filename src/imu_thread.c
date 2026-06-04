@@ -19,6 +19,7 @@ static void imu_thread(void)
 {
     if (icm_init(&icm)) // return 0 when properly configured
     {
+        // For now, just say task is ready even if it fails...
         k_event_post(&thread_sync_event, IMU_THREAD_READY);
         return;
     }
@@ -70,7 +71,7 @@ static void imu_thread(void)
             // LOG_INF("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g", gx, gy, gz, ax, ay, az);
         }
 
-        k_sleep(K_SECONDS(1));
+        k_sleep(K_MSEC(50));
     }
 }
 
