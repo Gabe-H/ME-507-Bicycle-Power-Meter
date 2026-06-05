@@ -5,12 +5,16 @@ K_MEM_SLAB_DEFINE(filter_data_slab,
                   10,
                   4);
 
+/**
+ * @brief Physical parameters of the system (constants)
+ *
+ */
 static crank_ekf_params_t ekf_params = {
     .g = M_GRAVITY,
     // .rx = 0.051, // Example x offset 51mm
     // .ry = 0.001, // Example y offset 1mm
-    .rx = 0.173, // Fake-a-crank
-    .ry = 0.012, // Fake-a-crank
+    .rx = 0.173, // Fake-a-crank x offset
+    .ry = 0.012, // Fake-a-crank y offset
     .sigma_alpha = 15.0,
     .sigma_bg = 0.003,
     .sigma_ba = 0.02,
@@ -75,7 +79,7 @@ static void crank_ekf_update(
     eekf_value ax_m_s2,
     eekf_value ay_m_s2)
 {
-    if (dt <= 0.0)
+    if (dt <= 0.0F)
     {
         return;
     }
@@ -176,7 +180,13 @@ static void filter_thread(void)
         float angle = crank_get_angle_rad();
         float omega = crank_get_cadence_rpm();
 
-        struct filter_data_t *data_out;
+        cps_crank_update(
+            &cps_crank_state,
+            wrap_pi(angle),
+            omega,
+            k_uptime)
+
+            struct filter_data_t *data_out;
 
         if (k_mem_slab_alloc(&filter_data_slab, (void **)&data_out, K_MSEC(10)) == 0)
         {
@@ -319,13 +329,13 @@ static void mat_zero(eekf_mat *m)
  */
 static eekf_value wrap_pi(eekf_value a)
 {
-    while (a > M_PI)
+    while (a > (eekf_value)M_PI)
     {
-        a -= 2.0F * M_PI;
+        a -= M_TWO_PI_F;
     }
-    while (a < -M_PI)
+    while (a < -(eekf_value)M_PI)
     {
-        a += 2.0F * M_PI;
+        a += M_TWO_PI_F;
     }
     return a;
 }
@@ -367,9 +377,9 @@ static void crank_update_Q(eekf_mat *Q, const crank_ekf_params_t *p, eekf_value 
     const eekf_value dt4 = dt2 * dt2;
 
     // angle/omega process noise from angular acceleration uncertainty
-    *EEKF_MAT_EL(*Q, 0, 0) = 0.25 * sa2 * dt4;
-    *EEKF_MAT_EL(*Q, 0, 1) = 0.5 * sa2 * dt3;
-    *EEKF_MAT_EL(*Q, 1, 0) = 0.5 * sa2 * dt3;
+    *EEKF_MAT_EL(*Q, 0, 0) = 0.25F * sa2 * dt4;
+    *EEKF_MAT_EL(*Q, 0, 1) = 0.5F * sa2 * dt3;
+    *EEKF_MAT_EL(*Q, 1, 0) = 0.5F * sa2 * dt3;
     *EEKF_MAT_EL(*Q, 1, 1) = sa2 * dt2;
 
     // bias random walks
@@ -382,8 +392,8 @@ static void crank_set_R(eekf_mat *R)
 {
     mat_zero(R);
 
-    const eekf_value sigma_g = 0.02; // rad/s; start conservative (more uncertain that IMU docs)
-    const eekf_value sigma_a = 0.50; // m/s^2; start conservative (more uncertain that IMU docs)
+    const eekf_value sigma_g = 0.02F; // rad/s; start conservative (more uncertain that IMU docs)
+    const eekf_value sigma_a = 0.50F; // m/s^2; start conservative (more uncertain that IMU docs)
 
     *EEKF_MAT_EL(*R, 0, 0) = sigma_g * sigma_g;
     *EEKF_MAT_EL(*R, 1, 1) = sigma_a * sigma_a;
@@ -403,7 +413,92 @@ static eekf_value crank_get_omega_rad_s(void)
 static eekf_value crank_get_cadence_rpm(void)
 {
     const eekf_value omega = crank_get_omega_rad_s();
-    return omega * (eekf_value)60.0F / ((eekf_value)2.0F * M_PI);
+    return omega * (eekf_value)60.0F / (M_TWO_PI_F);
+}
+
+static uint16_t cps_event_time_from_us(uint64_t t_us)
+{
+    /*
+     * CPS event time is uint16_t in 1/1024 second units.
+     * Natural uint16_t wrap is correct.
+     */
+    return (uint16_t)((t_us * 1024ULL) / 1000000ULL);
+}
+
+static void cps_crank_update(struct cps_crank_state *s,
+                             float theta_wrapped,
+                             float omega,
+                             uint64_t t_us)
+{
+    if (!s->initialized)
+    {
+        s->initialized = true;
+
+        s->theta_prev_wrapped = theta_wrapped;
+        s->theta_unwrapped = theta_wrapped;
+        s->theta_prev_unwrapped = theta_wrapped;
+        s->t_prev_us = t_us;
+
+        s->rev_index = (int32_t)floorf(s->theta_unwrapped / M_TWO_PI_F);
+
+        return;
+    }
+
+    float dtheta = wrap_pi(theta_wrapped - s->theta_prev_wrapped);
+
+    float theta_old = s->theta_unwrapped;
+    float theta_new = theta_old + dtheta;
+
+    int32_t old_rev_index = s->rev_index;
+    int32_t new_rev_index = (int32_t)floorf(theta_new / M_TWO_PI_F);
+
+    /*
+     * Count forward crank revolutions only.
+     * If your physical positive direction is opposite, flip the sign of theta/omega
+     * before calling this function.
+     */
+    if ((new_rev_index > old_rev_index) && (omega > MIN_FORWARD_OMEGA))
+    {
+        for (int32_t k = old_rev_index + 1; k <= new_rev_index; k++)
+        {
+            float crossing_angle = (float)k * M_TWO_PI_F;
+
+            float frac = (crossing_angle - theta_old) / (theta_new - theta_old);
+
+            if (frac < 0.0f)
+            {
+                frac = 0.0f;
+            }
+            else if (frac > 1.0f)
+            {
+                frac = 1.0f;
+            }
+
+            uint64_t dt_us = t_us - s->t_prev_us;
+            uint64_t t_cross_us = s->t_prev_us + (uint64_t)(frac * (float)dt_us);
+
+            s->crank_revs++;
+            s->crank_event_time = cps_event_time_from_us(t_cross_us);
+        }
+
+        s->rev_index = new_rev_index;
+    }
+    else
+    {
+        /*
+         * Still update rev_index for normal forward movement below one full rev.
+         * For reverse motion, I would generally not decrement the CPS crank counter.
+         */
+        if (new_rev_index > old_rev_index)
+        {
+            s->rev_index = new_rev_index;
+        }
+    }
+
+    s->theta_prev_wrapped = theta_wrapped;
+    s->theta_prev_unwrapped = theta_old;
+    s->theta_unwrapped = theta_new;
+    s->t_prev_us = t_us;
 }
 
 K_THREAD_DEFINE(filter_thread_id, STACKSIZE, filter_thread, NULL, NULL, NULL, 6, 0, 0);

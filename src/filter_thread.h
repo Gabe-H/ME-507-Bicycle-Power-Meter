@@ -12,7 +12,10 @@
 #define NZ 3 // Measurement dimension
 #define NU 1 // Input dimension; use it to pass dt
 
-#define M_PI 3.14159F
+#define M_PI 3.1415926536F
+#define M_TWO_PI_F 6.2831853071F
+
+#define MIN_FORWARD_OMEGA 0.5 // Min [rad/s] that crank must be going
 
 #define M_GRAVITY 9.80665F
 
@@ -51,6 +54,27 @@ typedef struct
     eekf_value sigma_ba;    // Accel bias random walk [m/s^2/sqrt(s)]
 } crank_ekf_params_t;
 
+/**
+ * @brief External state of the system. Used to calculate crank-rev index
+ * and crank_event_time for CPS BLE Service
+ *
+ */
+static struct cps_crank_state
+{
+    bool initialized;
+
+    float theta_prev_wrapped;
+    float theta_prev_unwrapped;
+    float theta_unwrapped;
+
+    uint64_t t_prev_us;
+
+    int32_t rev_index; // internal signed revolution index
+
+    uint16_t crank_revs;       // CPS cumulative crank revolutions
+    uint16_t crank_event_time; // CPS event time, 1/1024 s units
+};
+
 static eekf_context ekf_ctx;
 
 static crank_ekf_params_t ekf_params;
@@ -84,5 +108,20 @@ static eekf_value crank_get_angle_rad(void);
 static eekf_value crank_get_omega_rad_s(void);
 
 static eekf_value crank_get_cadence_rpm(void);
+
+/**
+ * @brief Calculate event time in 1/1024s as required by CPS service
+ *
+ */
+static uint16_t cps_event_time_from_us(uint64_t t_us);
+
+/**
+ * @brief Update external system states (for CPS service)
+ *
+ */
+static void cps_crank_update(struct cps_crank_state *s,
+                             float theta_wrapped,
+                             float omega,
+                             uint64_t t_us);
 
 #endif /* FILTER_THREAD_H */

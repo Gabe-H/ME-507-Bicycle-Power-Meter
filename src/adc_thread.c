@@ -12,7 +12,8 @@
 
 #include <stdio.h>
 
-LOG_MODULE_REGISTER(adc, LOG_LEVEL_INF);
+// LOG_MODULE_REGISTER(adc, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(adc, LOG_LEVEL_DBG);
 
 K_MEM_SLAB_DEFINE(axis_data_slab,
                   sizeof(struct axis_data),
@@ -34,7 +35,7 @@ static void adc_thread(void)
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
 
-    return;
+    return; // (thread no longer used. TODO: delete)
 
     /* Main loop: read axis values from callback queue and print */
     // while (1)

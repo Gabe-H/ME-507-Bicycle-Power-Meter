@@ -111,14 +111,14 @@
             in-max = <3000000>;
 
             /* Ignore small fluctuations around center to reduce chatter */
-            in-deadzone = <5000>;
+            in-deadzone = <0>;
 
             /* Map to a signed 16-bit output range (useful for consumers expecting
              * negative and positive axis values). Change if you prefer 0..65535.
              */
             out-min = <( -32768)>;
             out-max = <( 32767)>;
-            // skip-change-comparator; /* uncomment this to debug */
+            skip-change-comparator; /* uncomment this to debug */
 
             zephyr,axis-type = <INPUT_EV_ABS>;
             zephyr,axis = <INPUT_ABS_Y>;

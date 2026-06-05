@@ -1,7 +1,8 @@
 #include "power_meas.h"
 
 /** Logger configuration **/
-LOG_MODULE_REGISTER(pwr, LOG_LEVEL_DBG);
+// LOG_MODULE_REGISTER(pwr, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(pwr, LOG_LEVEL_INF);
 
 /**
  * @brief Thread that handles the syncronization of Kalman-filtered angle/angular velocity and torque from the input axis to
@@ -61,7 +62,8 @@ void power_measure_thread(void)
 
         /* Scale axis value based on calibration data */
 
-        float torque = (raw_axis_val * AXIS_SLOPE) + AXIS_INTERCEPT;
+        // float torque = ((float)raw_axis_val * AXIS_SLOPE) + AXIS_INTERCEPT;
+        float torque = (float)raw_axis_val;
 
         LOG_DBG("T: %.3f, O: %.2f, Th: %.2f", (double)torque, (double)omega, (double)theta);
 
