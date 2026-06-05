@@ -118,7 +118,7 @@
              */
             out-min = <( -32768)>;
             out-max = <( 32767)>;
-            skip-change-comparator; /* uncomment this to debug */
+            // skip-change-comparator; /* uncomment this to debug */
 
             zephyr,axis-type = <INPUT_EV_ABS>;
             zephyr,axis = <INPUT_ABS_Y>;

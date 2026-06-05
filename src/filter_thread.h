@@ -21,7 +21,15 @@
 
 #define DPS_TO_RAD_S 0.017453F
 
-#define FILTER_PERIOD 25 // Update period in ms
+/* Keep the EKF angle locally continuous, but do not let the float grow forever.
+ * Recenter by whole revolutions so sin/cos physics and CPS revolution counting
+ * remain unchanged.
+ */
+#ifndef THETA_RECENTER_REVS
+#define THETA_RECENTER_REVS (100.0F)
+#endif
+
+#define THETA_RECENTER_RAD ((eekf_value)THETA_RECENTER_REVS * M_TWO_PI_F)
 
 /**
  *  State vector, x
@@ -73,7 +81,7 @@ static struct cps_crank_state
 
     uint16_t crank_revs;       // CPS cumulative crank revolutions
     uint16_t crank_event_time; // CPS event time, 1/1024 s units
-};
+} crank_state;
 
 static eekf_context ekf_ctx;
 
@@ -114,6 +122,8 @@ static eekf_value crank_get_cadence_rpm(void);
  *
  */
 static uint16_t cps_event_time_from_us(uint64_t t_us);
+
+static void crank_ekf_recenter_angle(struct cps_crank_state *s);
 
 /**
  * @brief Update external system states (for CPS service)

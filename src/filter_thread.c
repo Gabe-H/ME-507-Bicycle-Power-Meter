@@ -59,6 +59,8 @@ static void crank_ekf_init(void)
     *EEKF_MAT_EL(x, 3, 0) = 0.0; // ax bias
     *EEKF_MAT_EL(x, 4, 0) = 0.0; // ay bias
 
+    crank_update_Q(&Q, &ekf_params, (eekf_value)IMU_PERIOD * (eekf_value)0.001);
+
     // Initial covariance
     mat_zero(&P);
 
@@ -92,7 +94,8 @@ static void crank_ekf_update(
     *EEKF_MAT_EL(z, 1, 0) = ax_m_s2;
     *EEKF_MAT_EL(z, 2, 0) = ay_m_s2;
 
-    // Process covariance for this timestep
+    /** Disable to test if constant dT assumption is good enough */
+    // // Process covariance for this timestep
     crank_update_Q(&Q, &ekf_params, dt);
 
     // Predict to current sample time
@@ -101,8 +104,10 @@ static void crank_ekf_update(
     // Correct using current gyro + accel measurement
     eekf_correct(&ekf_ctx, &z, &R);
 
-    // Wrap angle after correction
-    *EEKF_MAT_EL(x, 0, 0) = wrap_pi(*EEKF_MAT_EL(x, 0, 0));
+    /* Do not wrap theta here. Keep the EKF angle locally continuous so
+     * downstream crank revolution detection can use direct 2*pi crossings.
+     * The measurement model wraps theta locally before sin/cos.
+     */
 }
 
 /**
@@ -177,21 +182,34 @@ static void filter_thread(void)
             ax,
             ay);
 
-        float angle = crank_get_angle_rad();
-        float omega = crank_get_cadence_rpm();
+        eekf_value angle_unwrapped = crank_get_angle_rad();
+        eekf_value omega_rad_s = crank_get_omega_rad_s();
+        eekf_value cadence_rpm = crank_get_cadence_rpm();
+
+        uint64_t k_uptime = k_ticks_to_us_floor64(k_uptime_ticks());
 
         cps_crank_update(
-            &cps_crank_state,
-            wrap_pi(angle),
-            omega,
-            k_uptime)
+            &crank_state,
+            angle_unwrapped,
+            omega_rad_s,
+            k_uptime);
 
-            struct filter_data_t *data_out;
+        /* Recenter only after CPS has consumed the current sample. This keeps
+         * the EKF state numerically small without losing crank revolution
+         * continuity.
+         */
+        crank_ekf_recenter_angle(&crank_state);
+
+        eekf_value angle_local = crank_get_angle_rad();
+
+        struct filter_data_t *data_out;
 
         if (k_mem_slab_alloc(&filter_data_slab, (void **)&data_out, K_MSEC(10)) == 0)
         {
-            data_out->theta = angle;
-            data_out->omega = omega;
+            data_out->theta = angle_local;
+            data_out->omega = cadence_rpm;
+            data_out->crank_index = crank_state.crank_revs;
+            data_out->crank_event_time = crank_state.crank_event_time;
             data_out->ts = loop_start_ms;
 
             k_fifo_put(&filter_fifo, data_out);
@@ -234,7 +252,7 @@ static eekf_return transition(eekf_mat *xp, eekf_mat *Jf, eekf_mat const *x,
     const eekf_value bay = *EEKF_MAT_EL(*x, 4, 0);
 
     // Predicted state
-    *EEKF_MAT_EL(*xp, 0, 0) = wrap_pi(theta + dt * omega);
+    *EEKF_MAT_EL(*xp, 0, 0) = theta + dt * omega;
     *EEKF_MAT_EL(*xp, 1, 0) = omega;
     *EEKF_MAT_EL(*xp, 2, 0) = bg;
     *EEKF_MAT_EL(*xp, 3, 0) = bax;
@@ -268,7 +286,8 @@ static eekf_return measurement(eekf_mat *zp, eekf_mat *Jh, eekf_mat const *x,
 {
     crank_ekf_params_t *p = (crank_ekf_params_t *)userData;
 
-    const eekf_value theta = *EEKF_MAT_EL(*x, 0, 0);
+    /* Keep trig arguments bounded, but do not modify the EKF state angle. */
+    const eekf_value theta = wrap_pi(*EEKF_MAT_EL(*x, 0, 0));
     const eekf_value omega = *EEKF_MAT_EL(*x, 1, 0);
     const eekf_value bg = *EEKF_MAT_EL(*x, 2, 0);
     const eekf_value bax = *EEKF_MAT_EL(*x, 3, 0);
@@ -425,57 +444,99 @@ static uint16_t cps_event_time_from_us(uint64_t t_us)
     return (uint16_t)((t_us * 1024ULL) / 1000000ULL);
 }
 
+static void crank_ekf_recenter_angle(struct cps_crank_state *s)
+{
+    eekf_value theta = *EEKF_MAT_EL(x, 0, 0);
+
+    if ((theta < THETA_RECENTER_RAD) && (theta > -THETA_RECENTER_RAD))
+    {
+        return;
+    }
+
+    /* Use truncation toward zero so the recentered angle keeps the same sign
+     * and remains close to zero. Only subtract whole revolutions so the
+     * physical angle, sin(theta), and cos(theta) are unchanged.
+     */
+    int32_t revs_to_remove = (int32_t)(theta / M_TWO_PI_F);
+
+    if (revs_to_remove == 0)
+    {
+        return;
+    }
+
+    eekf_value theta_offset = (eekf_value)revs_to_remove * M_TWO_PI_F;
+
+    *EEKF_MAT_EL(x, 0, 0) = theta - theta_offset;
+
+    if ((s != NULL) && s->initialized)
+    {
+        /* Keep the CPS detector's internal angle frame aligned with the EKF
+         * frame. Do not alter s->crank_revs; that is the actual BLE CPS
+         * cumulative count.
+         */
+        s->theta_unwrapped -= theta_offset;
+        s->theta_prev_unwrapped -= theta_offset;
+        s->theta_prev_wrapped -= theta_offset;
+        s->rev_index -= revs_to_remove;
+    }
+}
+
 static void cps_crank_update(struct cps_crank_state *s,
-                             float theta_wrapped,
-                             float omega,
+                             eekf_value theta_unwrapped,
+                             eekf_value omega_rad_s,
                              uint64_t t_us)
 {
+    /* If the physical positive direction is opposite of the CPS crank-count
+     * direction, flip both theta_unwrapped and omega_rad_s before calling this
+     * function.
+     */
+
     if (!s->initialized)
     {
         s->initialized = true;
 
-        s->theta_prev_wrapped = theta_wrapped;
-        s->theta_unwrapped = theta_wrapped;
-        s->theta_prev_unwrapped = theta_wrapped;
+        s->theta_prev_wrapped = theta_unwrapped; /* Kept for struct compatibility. */
+        s->theta_unwrapped = theta_unwrapped;
+        s->theta_prev_unwrapped = theta_unwrapped;
         s->t_prev_us = t_us;
 
-        s->rev_index = (int32_t)floorf(s->theta_unwrapped / M_TWO_PI_F);
+        s->rev_index = (int32_t)floorf(theta_unwrapped / M_TWO_PI_F);
 
         return;
     }
 
-    float dtheta = wrap_pi(theta_wrapped - s->theta_prev_wrapped);
-
-    float theta_old = s->theta_unwrapped;
-    float theta_new = theta_old + dtheta;
+    eekf_value theta_old = s->theta_prev_unwrapped;
+    eekf_value theta_new = theta_unwrapped;
+    eekf_value dtheta = theta_new - theta_old;
 
     int32_t old_rev_index = s->rev_index;
     int32_t new_rev_index = (int32_t)floorf(theta_new / M_TWO_PI_F);
 
-    /*
-     * Count forward crank revolutions only.
-     * If your physical positive direction is opposite, flip the sign of theta/omega
-     * before calling this function.
+    /* Count forward crank revolutions only. A revolution is counted when the
+     * locally continuous EKF theta crosses one or more 2*pi boundaries in the
+     * positive direction. omega_rad_s is used only as a sanity gate against
+     * low-speed jitter near a boundary.
      */
-    if ((new_rev_index > old_rev_index) && (omega > MIN_FORWARD_OMEGA))
+    if ((new_rev_index > old_rev_index) &&
+        (dtheta > 0.0F) &&
+        (omega_rad_s > (eekf_value)MIN_FORWARD_OMEGA))
     {
         for (int32_t k = old_rev_index + 1; k <= new_rev_index; k++)
         {
-            float crossing_angle = (float)k * M_TWO_PI_F;
+            eekf_value crossing_angle = (eekf_value)k * M_TWO_PI_F;
+            eekf_value frac = (crossing_angle - theta_old) / dtheta;
 
-            float frac = (crossing_angle - theta_old) / (theta_new - theta_old);
-
-            if (frac < 0.0f)
+            if (frac < 0.0F)
             {
-                frac = 0.0f;
+                frac = 0.0F;
             }
-            else if (frac > 1.0f)
+            else if (frac > 1.0F)
             {
-                frac = 1.0f;
+                frac = 1.0F;
             }
 
             uint64_t dt_us = t_us - s->t_prev_us;
-            uint64_t t_cross_us = s->t_prev_us + (uint64_t)(frac * (float)dt_us);
+            uint64_t t_cross_us = s->t_prev_us + (uint64_t)(frac * (eekf_value)dt_us);
 
             s->crank_revs++;
             s->crank_event_time = cps_event_time_from_us(t_cross_us);
@@ -483,20 +544,18 @@ static void cps_crank_update(struct cps_crank_state *s,
 
         s->rev_index = new_rev_index;
     }
-    else
+    else if (new_rev_index > old_rev_index)
     {
-        /*
-         * Still update rev_index for normal forward movement below one full rev.
-         * For reverse motion, I would generally not decrement the CPS crank counter.
+        /* The angle crossed a boundary, but the motion sanity checks failed.
+         * Treat it as consumed so jitter cannot repeatedly count it later.
+         * Keep MIN_FORWARD_OMEGA low enough that genuine very-slow pedaling is
+         * not rejected.
          */
-        if (new_rev_index > old_rev_index)
-        {
-            s->rev_index = new_rev_index;
-        }
+        s->rev_index = new_rev_index;
     }
 
-    s->theta_prev_wrapped = theta_wrapped;
-    s->theta_prev_unwrapped = theta_old;
+    s->theta_prev_wrapped = theta_new; /* Kept for struct compatibility. */
+    s->theta_prev_unwrapped = theta_new;
     s->theta_unwrapped = theta_new;
     s->t_prev_us = t_us;
 }

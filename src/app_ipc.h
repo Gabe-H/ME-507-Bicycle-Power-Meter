@@ -4,13 +4,13 @@
 #include <zephyr/kernel.h>
 
 /** Threading configuration**/
-#define STACKSIZE 1024              // Stack area used by each thread
-#define IMU_DATA_SLAB_NUM_BLOCKS 20 // Number of blocks to allocate for IMU memory slab
-#define IMU_DATA_SLAB_ALIGNMENT 8   // Need 8 because data is dealing with int64_t
-#define AXIS_DATA_SLAB_NUM_BLOCKS 16
+#define STACKSIZE 1024             // Stack area used by each thread
+#define IMU_DATA_SLAB_NUM_BLOCKS 5 // Number of blocks to allocate for IMU memory slab
+#define IMU_DATA_SLAB_ALIGNMENT 8  // Need 8 because data is dealing with int64_t
+#define AXIS_DATA_SLAB_NUM_BLOCKS 5
 #define AXIS_DATA_SLAB_ALIGNMENT 8
-#define BLE_DATA_SLAB_NUM_BLOCKS 16
-#define BLE_DATA_SLAB_ALIGNMENT 4
+#define BLE_DATA_SLAB_NUM_BLOCKS 5
+#define BLE_DATA_SLAB_ALIGNMENT 8
 
 /** Thread coordination */
 #define ADC_THREAD_READY BIT(0)
@@ -27,6 +27,9 @@
                    PWR_THREAD_READY)
 
 #define START_BIT BIT(7) // START BIT is 1 higher than highest thread bit
+
+/** IMU Timing */
+#define IMU_PERIOD 50 // IMU data update period in milliseconds
 
 /** Axis data FIFO for queuing mapped axis values from callback **/
 
@@ -66,12 +69,13 @@ struct imu_data_t
  * @brief Struct containing data to be sent via BLE
  *
  * @param power Estimated power output at cranks [W]
- * @param rpm   Estimated crank speed [rpm]
  */
 struct ble_data_t
 {
-    uint16_t power; // Estimated power output [W]
-    uint16_t rpm;   // Estimated crank speed [RPM]
+    uint16_t initialized; // Honestly just a place holder to make this struct of size 8U for slab alignment
+    uint16_t power;       // Estimated power output [W]
+    uint16_t crank_index;
+    uint16_t crank_event_time;
 };
 
 /**
@@ -80,9 +84,11 @@ struct ble_data_t
  */
 struct filter_data_t
 {
-    float theta; // Estimated angle [rad]
-    float omega; // Estimated omega [rad/s]
-    int64_t ts;  // Uptime timestamps [ms]
+    float theta;               // Estimated angle [rad]
+    float omega;               // Estimated omega [rad/s]
+    uint16_t crank_index;      // Rotation index (used for CPS)
+    uint16_t crank_event_time; // Rotation time (used for CPS)
+    int64_t ts;                // Uptime timestamps [ms]
 };
 
 extern struct k_event thread_sync_event;

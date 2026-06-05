@@ -1,6 +1,7 @@
 #include "ble_thread.h"
 
-LOG_MODULE_REGISTER(ble, LOG_LEVEL_DBG);
+// LOG_MODULE_REGISTER(ble, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(ble, LOG_LEVEL_INF);
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected = connected,
@@ -68,10 +69,10 @@ static void recycled_cb(void)
 
 static void cps_notify_thread(void)
 {
-    uint16_t power_watts = 150U;     /* Start at 150W */
-    uint16_t power_direction = 1U;   /* 1 = increasing, 0 = decreasing */
-    uint16_t crank_revolutions = 0U; /* Cumulative crank revolutions */
-    uint16_t crank_event_time = 0U;  /* Time in 1/1024 second units */
+    // uint16_t power_watts = 150U;     /* Start at 150W */
+    // uint16_t power_direction = 1U;   /* 1 = increasing, 0 = decreasing */
+    // uint16_t crank_revolutions = 0U; /* Cumulative crank revolutions */
+    // uint16_t crank_event_time = 0U;  /* Time in 1/1024 second units */
     // uint32_t elapsed_ms = 0U;
     int err;
 
@@ -122,25 +123,37 @@ static void cps_notify_thread(void)
             // crank_revolutions++;
             // crank_event_time += (1024 * 1100 / 1000); /* ~1.1s in 1/1024 second units */
 
-            /* Send power data via CPS */
-            if (bt_cps_notify(power_watts, crank_revolutions, crank_event_time))
+            // Wait for data from power_meas thread
+            struct ble_data_t *data = k_fifo_get(&ble_fifo, K_FOREVER);
+            if (data)
             {
-                LOG_WRN("CPS notify failed\n");
+                LOG_INF("rcv: %u, %u, %u", data->power, data->crank_index, data->crank_event_time);
+
+                /* Send power data via CPS */
+                if (bt_cps_notify(data->power, data->crank_index, data->crank_event_time))
+                {
+                    LOG_WRN("CPS notify failed\n");
+                }
+                else
+                {
+                    LOG_DBG("CPS: Power=%uW, Crank_Rev=%u, Crank_Time=%u\n",
+                            data->power, data->crank_index, data->crank_event_time);
+                }
+
+                /* Send cadence data via CSCS */
+                if (bt_cscs_notify(data->crank_index, data->crank_event_time))
+                {
+                    LOG_WRN("CSCS notify failed\n");
+                }
+
+                // Free slab
+                k_mem_slab_free(&ble_data_slab, (void *)data);
             }
             else
-            {
-                LOG_DBG("CPS: Power=%uW, Crank_Rev=%u, Crank_Time=%u\n",
-                        power_watts, crank_revolutions, crank_event_time);
-            }
-
-            /* Send cadence data via CSCS */
-            if (bt_cscs_notify(crank_revolutions, crank_event_time))
-            {
-                LOG_WRN("CSCS notify failed\n");
-            }
+                continue; // Skip processing if no filter data ready
         }
 
-        k_sleep(CPS_NOTIFY_INTERVAL);
+        // k_sleep(CPS_NOTIFY_INTERVAL);
     }
 }
 

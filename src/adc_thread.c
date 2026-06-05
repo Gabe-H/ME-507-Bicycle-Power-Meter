@@ -12,8 +12,8 @@
 
 #include <stdio.h>
 
-// LOG_MODULE_REGISTER(adc, LOG_LEVEL_INF);
-LOG_MODULE_REGISTER(adc, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(adc, LOG_LEVEL_INF);
+// LOG_MODULE_REGISTER(adc, LOG_LEVEL_DBG);
 
 K_MEM_SLAB_DEFINE(axis_data_slab,
                   sizeof(struct axis_data),
