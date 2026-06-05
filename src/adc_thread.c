@@ -32,8 +32,12 @@ static void adc_thread(void)
     // Post READY bit to sync event share
     k_event_post(&thread_sync_event, ADC_THREAD_READY);
 
+    LOG_DBG("Thread ready");
+
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
+
+    LOG_DBG("Thread started");
 
     return; // (thread no longer used. TODO: delete)
 

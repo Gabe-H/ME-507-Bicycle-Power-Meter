@@ -22,7 +22,8 @@
 /** END INCLUDES **/
 
 /** Logger configuration **/
-LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
+// LOG_MODULE_REGISTER(app, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(app, LOG_LEVEL_DBG);
 
 /**
  * @brief Zephyr thread for sending messages to RTT terminal
@@ -36,13 +37,15 @@ void rtt_thread(void)
 
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
-    while (1)
-    {
-        char *rx_data = k_fifo_get(&printk_fifo, K_FOREVER);
 
-        puts(rx_data);
-        k_free(rx_data);
-    }
+    return;
+    // while (1)
+    // {
+    //     char *rx_data = k_fifo_get(&printk_fifo, K_FOREVER);
+
+    //     puts(rx_data);
+    //     k_free(rx_data);
+    // }
 }
 
 /**
@@ -55,11 +58,26 @@ int main(void)
 {
     // Wait for all READY bit flags to be set
     // k_event_wait_all(&thread_sync_event, ALL_READY, false, K_FOREVER);
-    uint32_t events = k_event_wait_all(
+    LOG_INF("Waiting for threads to be ready");
+
+    uint32_t events = 0;
+    for (int i = 0; i < 10; i++)
+    {
+        events = k_event_test(&thread_sync_event, ALL_READY);
+
+        LOG_DBG("Events: 0x%x", events);
+
+        if ((events & ALL_READY))
+
+            k_sleep(K_SECONDS(1));
+    }
+
+    LOG_DBG("Checking events");
+    events = k_event_wait_all(
         &thread_sync_event,
         ALL_READY,
         false,
-        K_SECONDS(5));
+        K_NO_WAIT);
 
     // Log error if not all threads started in time
     if ((events & ALL_READY) != ALL_READY)

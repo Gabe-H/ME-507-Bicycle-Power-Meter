@@ -15,6 +15,7 @@ static void battery_monitor_thread(void)
     {
         // Post READY bit to sync event share
         k_event_post(&thread_sync_event, BATTERY_THREAD_READY);
+        LOG_DBG("Thread ready");
 
         return;
     }
@@ -22,8 +23,12 @@ static void battery_monitor_thread(void)
     // Post READY bit to sync event share
     k_event_post(&thread_sync_event, BATTERY_THREAD_READY);
 
+    LOG_DBG("Thread ready");
+
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
+
+    LOG_DBG("Thread started");
 
     while (1)
     {
@@ -35,9 +40,11 @@ static void battery_monitor_thread(void)
 
         uint16_t volts = battery_monitor_read_voltage(&batt_mon); // Value is returned in millivolts
 
-        char *mem_ptr = k_malloc(32);
-        sprintf(mem_ptr, "Battery voltage: %dmV", volts);
-        k_fifo_put(&printk_fifo, mem_ptr);
+        LOG_INF("Batt voltage: %dmV", volts);
+
+        // char *mem_ptr = k_malloc(32);
+        // sprintf(mem_ptr, "Battery voltage: %dmV", volts);
+        // k_fifo_put(&printk_fifo, mem_ptr);
 
         k_sleep(K_SECONDS(5));
     }

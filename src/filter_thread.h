@@ -2,6 +2,7 @@
 #define FILTER_THREAD_H
 
 #include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
 #include "app_ipc.h"
 
 #include <eekf/eekf.h>

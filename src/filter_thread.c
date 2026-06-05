@@ -1,5 +1,7 @@
 #include "filter_thread.h"
 
+LOG_MODULE_REGISTER(ekf, LOG_LEVEL_INF);
+
 K_MEM_SLAB_DEFINE(filter_data_slab,
                   sizeof(struct filter_data_t),
                   10,
@@ -128,8 +130,12 @@ static void filter_thread(void)
     // Post READY bit to sync event share
     k_event_post(&thread_sync_event, FILTER_THREAD_READY);
 
+    LOG_DBG("Thread ready");
+
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
+
+    LOG_DBG("Thread started");
 
     previous_ts = k_uptime_get();
 
