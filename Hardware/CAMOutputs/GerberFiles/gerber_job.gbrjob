@@ -1,0 +1,24 @@
+{
+    "Header": {
+        "Comment": "All values are metric (mm)",
+        "CreationDate": "2026-06-09T05:31:59Z",
+        "GenerationSoftware": {
+            "Application": "Fusion Electronics",
+            "Vendor": "Autodesk",
+            "Version": "9.7.0"
+        },
+        "Part": "Single"
+    },
+    "Overall": {
+        "BoardThickness": 1.640844,
+        "LayerNumber": 4,
+        "Name": {
+            "ProjectId": "Power Meter v3"
+        },
+        "Owner": "Gabe Haarberg <ghaarber@calpoly.edu>",
+        "Size": {
+            "X": 60.198,
+            "Y": 24.13
+        }
+    }
+}

@@ -566,4 +566,13 @@ static void cps_crank_update(struct cps_crank_state *s,
     s->t_prev_us = t_us;
 }
 
-K_THREAD_DEFINE(filter_thread_id, STACKSIZE, filter_thread, NULL, NULL, NULL, 6, 0, 0);
+K_THREAD_DEFINE(
+    filter_thread_id,
+    STACKSIZE,
+    filter_thread,
+    NULL,
+    NULL,
+    NULL,
+    6,
+    K_FP_REGS,
+    0);

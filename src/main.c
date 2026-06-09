@@ -67,9 +67,10 @@ int main(void)
 
         LOG_DBG("Events: 0x%x", events);
 
-        if ((events & ALL_READY))
-
+        if ((events & ALL_READY) != ALL_READY)
             k_sleep(K_SECONDS(1));
+        else
+            break;
     }
 
     LOG_DBG("Checking events");

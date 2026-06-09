@@ -1,8 +1,8 @@
 #include "power_meas.h"
 
 /** Logger configuration **/
-// LOG_MODULE_REGISTER(pwr, LOG_LEVEL_DBG);
-LOG_MODULE_REGISTER(pwr, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(pwr, LOG_LEVEL_DBG);
+// LOG_MODULE_REGISTER(pwr, LOG_LEVEL_INF);
 
 /**
  * @brief Thread that handles the syncronization of Kalman-filtered angle/angular velocity and torque from the input axis to
