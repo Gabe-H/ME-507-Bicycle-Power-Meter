@@ -140,4 +140,4 @@ static void cps_notify_thread(void)
 }
 
 K_THREAD_DEFINE(cps_notify_thread_id, STACKSIZE, cps_notify_thread,
-                NULL, NULL, NULL, 7, 0, 0);
+                NULL, NULL, NULL, 3, 0, 0); // Lowest priority in power calculation chain

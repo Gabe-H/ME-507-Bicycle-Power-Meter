@@ -43,7 +43,6 @@ static const struct bt_data sd[] = {
 };
 
 static struct k_work adv_work;
-static bool peripheral_connected;
 
 static void adv_work_handler(struct k_work *work);
 

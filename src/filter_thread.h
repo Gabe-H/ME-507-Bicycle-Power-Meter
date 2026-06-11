@@ -106,7 +106,7 @@ static void mat_zero(eekf_mat *);
 
 static eekf_value wrap_pi(eekf_value);
 
-static void set_diag(eekf_mat *, uint8_t, const eekf_value *);
+// static void set_diag(eekf_mat *, uint8_t, const eekf_value *);
 
 static void crank_update_Q(eekf_mat *, const crank_ekf_params_t *, eekf_value);
 

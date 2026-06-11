@@ -365,22 +365,22 @@ static eekf_value wrap_pi(eekf_value a)
     return a;
 }
 
-/**
- * @brief Set the diagonal of a matrix to some diag array
- *
- * @param m eekf_mat matrix
- * @param n num diagonals to be set
- * @param diag eekf_vector array of values to set to each diag. element
- * @return * void
- */
-static void set_diag(eekf_mat *m, uint8_t n, const eekf_value *diag)
-{
-    mat_zero(m);
-    for (uint8_t i = 0; i < n; i++)
-    {
-        *EEKF_MAT_EL(*m, i, i) = diag[i];
-    }
-}
+// /**
+//  * @brief Set the diagonal of a matrix to some diag array
+//  *
+//  * @param m eekf_mat matrix
+//  * @param n num diagonals to be set
+//  * @param diag eekf_vector array of values to set to each diag. element
+//  * @return * void
+//  */
+// static void set_diag(eekf_mat *m, uint8_t n, const eekf_value *diag)
+// {
+//     mat_zero(m);
+//     for (uint8_t i = 0; i < n; i++)
+//     {
+//         *EEKF_MAT_EL(*m, i, i) = diag[i];
+//     }
+// }
 
 /**
  * @brief Fill out Q after each sample because it depends on dt
@@ -573,6 +573,6 @@ K_THREAD_DEFINE(
     NULL,
     NULL,
     NULL,
-    6,
+    4, // Priority: Above BLE thread, under IMU thread
     K_FP_REGS,
     0);

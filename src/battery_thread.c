@@ -50,4 +50,4 @@ static void battery_monitor_thread(void)
     }
 }
 
-K_THREAD_DEFINE(battery_thread_id, STACKSIZE, battery_monitor_thread, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(battery_thread_id, STACKSIZE, battery_monitor_thread, NULL, NULL, NULL, 1, 0, 0); // Low priority
