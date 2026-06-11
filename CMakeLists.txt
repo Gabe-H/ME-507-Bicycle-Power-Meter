@@ -13,7 +13,7 @@ target_sources(app PRIVATE
     src/main.c
     src/app_ipc.c
     src/imu_thread.c
-    src/adc_thread.c
+    src/adc.c
     src/filter_thread.c
     src/battery_thread.c
     src/ble_thread.c

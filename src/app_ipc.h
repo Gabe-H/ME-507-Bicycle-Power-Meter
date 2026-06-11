@@ -32,18 +32,6 @@
 /** IMU Timing */
 #define IMU_PERIOD 50 // IMU data update period in milliseconds
 
-/** Axis data FIFO for queuing mapped axis values from callback **/
-
-/**
- * @brief Struct containing value of strain gauge
- *
- */
-struct axis_data
-{
-    int32_t value;
-    int channel;
-};
-
 /**
  * @brief Struct containing relevant info from IMU
  *
@@ -102,7 +90,6 @@ extern struct k_mem_slab filter_data_slab;
 extern struct k_fifo printk_fifo;
 
 extern struct k_mutex axis_latest_lock;
-// extern struct k_sem axis_latest_ready;
 extern int32_t axis_latest_value;
 
 #endif /* APP_IPC_H */
