@@ -136,4 +136,4 @@ void power_measure_thread(void)
     }
 }
 
-K_THREAD_DEFINE(power_measure_thread_id, STACKSIZE, power_measure_thread, NULL, NULL, NULL, 5, 0, 0);
+K_THREAD_DEFINE(power_measure_thread_id, 768, power_measure_thread, NULL, NULL, NULL, 5, 0, 0);

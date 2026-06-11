@@ -568,7 +568,7 @@ static void cps_crank_update(struct cps_crank_state *s,
 
 K_THREAD_DEFINE(
     filter_thread_id,
-    STACKSIZE,
+    768,
     filter_thread,
     NULL,
     NULL,

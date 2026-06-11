@@ -84,4 +84,4 @@ static void imu_thread(void)
     }
 }
 
-K_THREAD_DEFINE(imu_thread_id, STACKSIZE, imu_thread, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(imu_thread_id, 512, imu_thread, NULL, NULL, NULL, 7, 0, 0);

@@ -21,9 +21,10 @@
 #define RTT_THREAD_READY BIT(5)
 #define PWR_THREAD_READY BIT(6)
 
-#define ALL_READY (ADC_THREAD_READY | BATTERY_THREAD_READY | \
-                   BLE_THREAD_READY | FILTER_THREAD_READY |  \
-                   IMU_THREAD_READY | RTT_THREAD_READY |     \
+#define ALL_READY (/* ADC_THREAD_READY | */                 \
+                   BATTERY_THREAD_READY |                   \
+                   BLE_THREAD_READY | FILTER_THREAD_READY | \
+                   IMU_THREAD_READY | RTT_THREAD_READY |    \
                    PWR_THREAD_READY)
 
 #define START_BIT BIT(7) // START BIT is 1 higher than highest thread bit

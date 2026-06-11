@@ -27,37 +27,37 @@ K_MEM_SLAB_DEFINE(axis_data_slab,
  * Registers the analog-axis callback, then continuously reads mapped axis
  * values from the axis_fifo queue and forwards them to RTT via printk_fifo.
  */
-static void adc_thread(void)
-{
-    // Post READY bit to sync event share
-    k_event_post(&thread_sync_event, ADC_THREAD_READY);
+// static void adc_thread(void)
+// {
+//     // Post READY bit to sync event share
+//     k_event_post(&thread_sync_event, ADC_THREAD_READY);
 
-    LOG_DBG("Thread ready");
+//     LOG_DBG("Thread ready");
 
-    // Continue to main loop after START bit received
-    k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
+//     // Continue to main loop after START bit received
+//     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
 
-    LOG_DBG("Thread started");
+//     LOG_DBG("Thread started");
 
-    return; // (thread no longer used. TODO: delete)
+//     return; // (thread no longer used. TODO: delete)
 
-    /* Main loop: read axis values from callback queue and print */
-    // while (1)
-    // {
-    // /* Get axis data from FIFO with timeout to keep responsiveness */
-    // struct axis_data *axis_msg = k_fifo_get(&axis_fifo, K_FOREVER);
-    // if (axis_msg)
-    // {
-    //     char *mem_ptr = k_malloc(64);
-    //     if (mem_ptr)
-    //     {
-    //         sprintf(mem_ptr, "Axis ch%d: %d", axis_msg->channel, (int)axis_msg->value);
-    //         k_fifo_put(&printk_fifo, mem_ptr);
-    //     }
-    //     k_mem_slab_free(&axis_data_slab, (void *)axis_msg);
-    // }
-    // }
-}
+//     /* Main loop: read axis values from callback queue and print */
+//     // while (1)
+//     // {
+//     // /* Get axis data from FIFO with timeout to keep responsiveness */
+//     // struct axis_data *axis_msg = k_fifo_get(&axis_fifo, K_FOREVER);
+//     // if (axis_msg)
+//     // {
+//     //     char *mem_ptr = k_malloc(64);
+//     //     if (mem_ptr)
+//     //     {
+//     //         sprintf(mem_ptr, "Axis ch%d: %d", axis_msg->channel, (int)axis_msg->value);
+//     //         k_fifo_put(&printk_fifo, mem_ptr);
+//     //     }
+//     //     k_mem_slab_free(&axis_data_slab, (void *)axis_msg);
+//     // }
+//     // }
+// }
 
 /**
  * @brief Input event callback (called by the Zephyr input subsystem)
@@ -97,7 +97,7 @@ static void input_evt_cb(struct input_event *evt, void *user_data)
     }
 }
 
-K_THREAD_DEFINE(adc_thread_id, STACKSIZE, adc_thread, NULL, NULL, NULL, 7, 0, 0);
+// K_THREAD_DEFINE(adc_thread_id, STACKSIZE, adc_thread, NULL, NULL, NULL, 7, 0, 0);
 
 INPUT_CALLBACK_DEFINE(
     // DEVICE_DT_GET(DT_NODELABEL(anin0)),

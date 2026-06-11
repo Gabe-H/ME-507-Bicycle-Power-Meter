@@ -14,6 +14,8 @@ K_MEM_SLAB_DEFINE(ble_data_slab,
                   BLE_DATA_SLAB_NUM_BLOCKS,
                   BLE_DATA_SLAB_ALIGNMENT);
 
+K_EVENT_DEFINE(device_connected_event);
+
 static void adv_work_handler(struct k_work *work)
 {
     int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
@@ -45,7 +47,8 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
         return;
     }
 
-    peripheral_connected = true;
+    // peripheral_connected = true;
+    k_event_set(&device_connected_event, DEV_CONNECTED);
     // dk_set_led_on(PERIPHERAL_CONN_STATUS_LED);
     LOG_INF("Peripheral connected: %s\n", addr);
 }
@@ -56,7 +59,8 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
 
     bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
-    peripheral_connected = false;
+    // peripheral_connected = false;
+    k_event_clear(&device_connected_event, DEV_CONNECTED);
     // dk_set_led_off(PERIPHERAL_CONN_STATUS_LED);
     LOG_INF("Disconnected: %s, reason 0x%02x %s\n", addr, reason, bt_hci_err_to_str(reason));
 }
@@ -98,35 +102,11 @@ static void cps_notify_thread(void)
 
     while (1)
     {
-        // Only send data if we're connected to a host
-        if (peripheral_connected)
+        // Only send data if host connected. Do not reset so that ble loop continues
+        // while device is connected. Otherwise, wait forever.
+        uint32_t events = k_event_wait(&device_connected_event, DEV_CONNECTED, false, K_FOREVER);
+        if (events & DEV_CONNECTED)
         {
-            // /* Update power value: ramp from 150W to 350W over 60s cycle */
-            // if (power_direction == 1U)
-            // {
-            //     power_watts += 10U; /* Increase by 10W per notification (~1.1s apart) */
-            //     if (power_watts >= 350U)
-            //     {
-            //         power_watts = 350U;
-            //         power_direction = 0U; /* Switch to decreasing */
-            //     }
-            // }
-            // else
-            // {
-            //     power_watts -= 10U; /* Decrease by 10W per notification */
-            //     if (power_watts <= 150U)
-            //     {
-            //         power_watts = 150U;
-            //         power_direction = 1U; /* Switch to increasing */
-            //     }
-            // }
-
-            // /* Update crank data: simulate 90 RPM cadence */
-            // /* 90 RPM = 1.5 revolutions per second */
-            // /* At 1.1s intervals: 1.5 * 1.1 = 1.65 revolutions per update */
-            // crank_revolutions++;
-            // crank_event_time += (1024 * 1100 / 1000); /* ~1.1s in 1/1024 second units */
-
             // Wait for data from power_meas thread
             struct ble_data_t *data = k_fifo_get(&ble_fifo, K_FOREVER);
             if (data)
@@ -156,8 +136,6 @@ static void cps_notify_thread(void)
             else
                 continue; // Skip processing if no filter data ready
         }
-
-        // k_sleep(CPS_NOTIFY_INTERVAL);
     }
 }
 

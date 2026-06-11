@@ -16,7 +16,7 @@
 // #define PERIPHERAL_CONN_STATUS_LED DK_LED3
 
 // #define RUN_LED_BLINK_INTERVAL 1000
-#define CPS_NOTIFY_INTERVAL K_MSEC(1100) /* ~1 Hz notification rate */
+#define CPS_NOTIFY_INTERVAL K_MSEC(1000) /* ~1 Hz notification rate */
 
 /* CPS Service UUIDs */
 #define BT_UUID_CPS_VAL 0x1818
@@ -24,6 +24,8 @@
 
 /* CSCS Service UUID (Cycling Speed and Cadence Service) */
 #define BT_UUID_CSCS_VAL 0x1816
+
+#define DEV_CONNECTED BIT(0) // Event bit to indicate that device has been connected
 
 /* Peripheral role: advertise CSCS (cadence) and CPS (power) for full cycling sensor */
 static const struct bt_data ad[] = {
