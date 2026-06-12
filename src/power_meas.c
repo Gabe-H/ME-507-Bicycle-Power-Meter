@@ -1,8 +1,8 @@
 #include "power_meas.h"
 
 /** Logger configuration **/
-LOG_MODULE_REGISTER(pwr, LOG_LEVEL_DBG);
-// LOG_MODULE_REGISTER(pwr, LOG_LEVEL_INF);
+// LOG_MODULE_REGISTER(pwr, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(pwr, LOG_LEVEL_WRN);
 
 /**
  * @brief Thread that handles the syncronization of Kalman-filtered angle/angular velocity and torque from the input axis to
@@ -65,6 +65,12 @@ void power_measure_thread(void)
             crank_event_time = filter_data->crank_event_time;
             ts = filter_data->ts;
 
+            LOG_DBG("Th: %.2f, Om: %.1f, #: %u, t: %u",
+                    (double)theta,
+                    (double)omega,
+                    crank_index,
+                    crank_event_time);
+
             // Free slab
             k_mem_slab_free(&filter_data_slab, (void *)filter_data);
         }
@@ -78,8 +84,17 @@ void power_measure_thread(void)
 
         /* Scale axis value based on calibration data */
 
+#if defined(FORWARD_DIR)
         float torque = ((float)raw_axis_val * (float)AXIS_SLOPE) + (float)AXIS_INTERCEPT;
-        // float torque = (float)raw_axis_val;
+#elif defined(REVERSE_DIR)
+        float torque = -(((float)raw_axis_val * (float)AXIS_SLOPE) + (float)AXIS_INTERCEPT);
+#else
+#error "Direction must be specified"
+#endif
+
+        // Ignore negative torque for power calc
+        if (torque < 0)
+            torque = 0;
 
         omega_sum -= omega_samples[sample_index];
         theta_sum -= theta_samples[sample_index];

@@ -1,6 +1,7 @@
 #include "filter_thread.h"
 
-LOG_MODULE_REGISTER(ekf, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(ekf, LOG_LEVEL_WRN);
+// LOG_MODULE_REGISTER(ekf, LOG_LEVEL_DBG);
 
 K_MEM_SLAB_DEFINE(filter_data_slab,
                   sizeof(struct filter_data_t),
@@ -146,6 +147,21 @@ static void filter_thread(void)
         struct imu_data_t *data = k_fifo_get(&imu_fifo, K_FOREVER);
         if (data)
         {
+            /**
+             * IMU-crank orientation
+             *
+             * Imagine looking at the crank like a unit circle
+             * (0deg horizontal to the right, positive rotation CCW)
+             * +X axis faces outwards from crank shafe
+             * +Y axis faces tangent to CCW direction
+             *
+             * In this state, the following should be true:
+             * Accel X: 0g
+             * Accel Y: -1g
+             * When rotating positive (CCW)
+             * Gyro Z: +
+             */
+
             // -- OPTIMAL CONFIGURATION: Board is actually in line with crank axis
             // ax = data->accel_x;
             // ay = data->accel_y;
@@ -155,12 +171,15 @@ static void filter_thread(void)
             //    (Gyro Z is rotation direction)
             // Translate IMU axes such that +x faces outward from crank
             // and +y faces upwards when crank is horizontal
-            // ax = data->accel_y;
-            // ay = -data->accel_x;
+            // ENABLE REVERSE_DIR
+
+            // ax = -data->accel_y;
+            // ay = data->accel_x;
             // gz = data->gyro_z;
 
             // -- ALTERNATE CONFIGURATION: board on side of crank
             //    (-Gyro X is rotation direction)
+            // ENABLE FORWARD_DIR
             ax = data->accel_y;
             ay = -data->accel_z;
             gz = -data->gyro_x;
@@ -190,7 +209,6 @@ static void filter_thread(void)
 
         eekf_value angle_unwrapped = crank_get_angle_rad();
         eekf_value omega_rad_s = crank_get_omega_rad_s();
-        eekf_value cadence_rpm = crank_get_cadence_rpm();
 
         uint64_t k_uptime = k_ticks_to_us_floor64(k_uptime_ticks());
 
@@ -213,10 +231,16 @@ static void filter_thread(void)
         if (k_mem_slab_alloc(&filter_data_slab, (void **)&data_out, K_MSEC(10)) == 0)
         {
             data_out->theta = angle_local;
-            data_out->omega = cadence_rpm;
+            data_out->omega = omega_rad_s;
             data_out->crank_index = crank_state.crank_revs;
             data_out->crank_event_time = crank_state.crank_event_time;
             data_out->ts = loop_start_ms;
+
+            LOG_DBG("Th: %.2f, Om: %.1f, #: %u, t: %u",
+                    (double)angle_local,
+                    (double)omega_rad_s,
+                    crank_state.crank_revs,
+                    crank_state.crank_event_time);
 
             k_fifo_put(&filter_fifo, data_out);
         }
@@ -427,12 +451,26 @@ static void crank_set_R(eekf_mat *R)
 
 static eekf_value crank_get_angle_rad(void)
 {
+#if defined(FORWARD_DIR)
     return *EEKF_MAT_EL(x, 0, 0);
+#elif defined(REVERSE_DIR)
+    return *EEKF_MAT_EL(x, 0, 0) * -1;
+
+#else
+#error "A crank direction must be specified"
+#endif
 }
 
 static eekf_value crank_get_omega_rad_s(void)
 {
+#if defined(FORWARD_DIR)
     return *EEKF_MAT_EL(x, 1, 0);
+#elif defined(REVERSE_DIR)
+    return *EEKF_MAT_EL(x, 1, 0) * -1;
+
+#else
+#error "A crank direction must be specified"
+#endif
 }
 
 static eekf_value crank_get_cadence_rpm(void)

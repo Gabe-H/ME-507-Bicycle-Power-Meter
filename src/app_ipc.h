@@ -32,6 +32,9 @@
 /** IMU Timing */
 #define IMU_PERIOD 50 // IMU data update period in milliseconds
 
+#define FORWARD_DIR // Gyro in right-hand-rule
+// #define REVERSE_DIR // Gyro in left-hand-rule
+
 /**
  * @brief Struct containing relevant info from IMU
  *

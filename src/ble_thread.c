@@ -93,12 +93,8 @@ static void cps_notify_thread(void)
     // Post READY bit to sync event share
     k_event_post(&thread_sync_event, BLE_THREAD_READY);
 
-    LOG_DBG("Thread ready");
-
     // Continue to main loop after START bit received
     k_event_wait(&thread_sync_event, START_BIT, false, K_FOREVER);
-
-    LOG_DBG("Thread started");
 
     while (1)
     {
@@ -111,7 +107,7 @@ static void cps_notify_thread(void)
             struct ble_data_t *data = k_fifo_get(&ble_fifo, K_FOREVER);
             if (data)
             {
-                LOG_INF("rcv: %u, %u, %u", data->power, data->crank_index, data->crank_event_time);
+                // LOG_INF("rcv: %u, %u, %u", data->power, data->crank_index, data->crank_event_time);
 
                 /* Send power data via CPS */
                 if (bt_cps_notify(data->power, data->crank_index, data->crank_event_time))
@@ -132,8 +128,9 @@ static void cps_notify_thread(void)
 
 #if IS_ENABLED(CONFIG_NUS_DEBUG_BUILD)
                 char buf[100];
-                int s = sprintf(buf, "CPS: Pwr=%03uW, Rev=%02u, Time=%06u", data->power, data->crank_index, data->crank_event_time);
-                // "CPS: Pwr=000W, Rev=00, Time=000000"
+                // int s = sprintf(buf, "CPS: Pwr=%03uW, Rev=%02u, Time=%06u", data->power, data->crank_index, data->crank_event_time);
+                // int s = sprintf(buf, "%03u,%03u,%05u", data->power, data->crank_index, data->crank_event_time);
+                int s = sprintf(buf, "%03u,%03u,%05u", data->power, data->crank_index, data->crank_event_time);
 
                 int err = bt_nus_send(NULL, &buf, s);
                 if (err < 0 && (err != -EAGAIN) && (err != -ENOTCONN))
@@ -159,7 +156,7 @@ K_THREAD_DEFINE(cps_notify_thread_id, STACKSIZE, cps_notify_thread,
 static void nus_thread(void)
 {
     // char buf[] = "Hello, world!";
-    char buf[50];
+    // char buf[50];
     while (1)
     {
         // struct filter_data_t *data = k_fifo_peek_head(&filter_fifo);

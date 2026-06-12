@@ -1,7 +1,8 @@
 #include "imu_thread.h"
 
 /** Logger configuration **/
-LOG_MODULE_REGISTER(imu, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(imu, LOG_LEVEL_WRN);
+// LOG_MODULE_REGISTER(imu, LOG_LEVEL_DBG);
 
 K_MEM_SLAB_DEFINE(imu_data_slab,
                   sizeof(struct imu_data_t),
@@ -71,7 +72,13 @@ static void imu_thread(void)
             {
                 LOG_WRN("Warning: Couldn't allocate space on slab");
             }
-            // LOG_INF("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g", gx, gy, gz, ax, ay, az);
+            LOG_DBG("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g",
+                    (double)gx,
+                    (double)gy,
+                    (double)gz,
+                    (double)ax,
+                    (double)ay,
+                    (double)az);
         }
 
         k_sleep(K_MSEC(IMU_PERIOD));
