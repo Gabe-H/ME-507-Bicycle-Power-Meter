@@ -1,9 +1,5 @@
 name: Build and deploy Doxygen docs
 
-run: |
-  mkdir -p build/docs
-  doxygen Doxyfile
-
 on:
   push:
     branches: [main]
@@ -32,6 +28,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y doxygen graphviz
+
+      - name: Create docs directory
+        run: |
+          mkdir -p build/docs
+          doxygen Doxyfile
 
       - name: Build Doxygen documentation
         run: doxygen Doxyfile
