@@ -71,12 +71,6 @@ static void imu_thread(void)
             {
                 LOG_WRN("Warning: Couldn't allocate space on slab");
             }
-            // char *mem_ptr = k_malloc(100);
-            // sprintf(mem_ptr, "Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g",
-            //         (double)gx, (double)gy, (double)gz,
-            //         (double)ax, (double)ay, (double)az);
-            // k_fifo_put(&printk_fifo, mem_ptr);
-
             // LOG_INF("Read values:  x: %0.2f, y: %0.2f, z: %0.2f dps | x: %0.2f, y: %0.2f, z: %0.2f g", gx, gy, gz, ax, ay, az);
         }
 

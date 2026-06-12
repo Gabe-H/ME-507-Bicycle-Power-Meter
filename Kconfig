@@ -1,0 +1,11 @@
+# Kconfig
+
+source "KConfig.zephyr"
+
+menu "ME-507 Bicycle Power Meter"
+
+config NUS_DEBUG_BUILD
+    bool "Enable NUS debug build features"
+    default n
+
+endmenu

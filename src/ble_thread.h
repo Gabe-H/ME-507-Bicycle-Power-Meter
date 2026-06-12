@@ -8,6 +8,12 @@
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/logging/log.h>
 
+#if IS_ENABLED(CONFIG_NUS_DEBUG_BUILD)
+#include <zephyr/bluetooth/services/nus.h>
+#include <zephyr/shell/shell.h>
+#include <stdio.h>
+#endif
+
 #include "cps.h"
 #include "cscs.h"
 #include "app_ipc.h"
@@ -36,6 +42,9 @@ static const struct bt_data ad[] = {
     BT_DATA_BYTES(BT_DATA_UUID16_ALL,
                   BT_UUID_16_ENCODE(BT_UUID_CSCS_VAL),
                   BT_UUID_16_ENCODE(BT_UUID_CPS_VAL)),
+    // BT_DATA_BYTES(BT_DATA_UUID16_ALL,
+    //               BT_UUID_CSC_VAL,
+    //               BT_UUID_CPS_VAL)
 };
 
 static const struct bt_data sd[] = {

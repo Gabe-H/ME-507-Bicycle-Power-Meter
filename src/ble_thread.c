@@ -130,6 +130,19 @@ static void cps_notify_thread(void)
                     LOG_WRN("CSCS notify failed\n");
                 }
 
+#if IS_ENABLED(CONFIG_NUS_DEBUG_BUILD)
+                char buf[100];
+                int s = sprintf(buf, "CPS: Pwr=%03uW, Rev=%02u, Time=%06u", data->power, data->crank_index, data->crank_event_time);
+                // "CPS: Pwr=000W, Rev=00, Time=000000"
+
+                int err = bt_nus_send(NULL, &buf, s);
+                if (err < 0 && (err != -EAGAIN) && (err != -ENOTCONN))
+                {
+                    LOG_WRN("NUS failed!");
+                    return;
+                }
+#endif
+
                 // Free slab
                 k_mem_slab_free(&ble_data_slab, (void *)data);
             }
@@ -141,3 +154,38 @@ static void cps_notify_thread(void)
 
 K_THREAD_DEFINE(cps_notify_thread_id, STACKSIZE, cps_notify_thread,
                 NULL, NULL, NULL, 3, 0, 0); // Lowest priority in power calculation chain
+
+#if IS_ENABLED(CONFIG_NUS_DEBUG_BUILD)
+static void nus_thread(void)
+{
+    // char buf[] = "Hello, world!";
+    char buf[50];
+    while (1)
+    {
+        // struct filter_data_t *data = k_fifo_peek_head(&filter_fifo);
+        // if (data)
+        // {
+        //     sprintf(buf, "Omega: %03.2f, Theta: %03.2f", data->omega, data->theta);
+        // }
+
+        // int err = bt_nus_send(NULL, &buf, 29);
+        // if (err < 0 && (err != -EAGAIN) && (err != -ENOTCONN))
+        // {
+        //     return;
+        // }
+
+        k_sleep(K_MSEC(50));
+    }
+}
+
+K_THREAD_DEFINE(nus_thread_id, STACKSIZE, nus_thread,
+                NULL, NULL, NULL, 0, 0, 0); // Very low priority - just logging
+
+// static int cmd_pm_status(const struct shell *sh, size_t argc, char **argv)
+// {
+//     shell_print(sh, "NUS debug build is active");
+//     return 0;
+// }
+
+// SHELL_CMD_REGISTER(pm_status, NULL, "Print power meter debug status", cmd_pm_status);
+#endif
