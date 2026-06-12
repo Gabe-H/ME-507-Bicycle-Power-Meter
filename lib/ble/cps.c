@@ -70,7 +70,7 @@ static uint8_t cps_response[5];			   /* Control Point Response buffer: OpCode + 
 static uint8_t cps_response_len = 0;	   /* Current response length */
 static sys_slist_t cps_cbs = SYS_SLIST_STATIC_INIT(&cps_cbs);
 
-static void hrmc_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
+static void cps_ccc_cfg_changed(const struct bt_gatt_attr *attr, uint16_t value)
 {
 	ARG_UNUSED(attr);
 
@@ -171,7 +171,7 @@ BT_GATT_SERVICE_DEFINE(cps_svc,
 					   BT_GATT_PRIMARY_SERVICE(BT_UUID_CPS),
 					   BT_GATT_CHARACTERISTIC(BT_UUID_CPS_MEASUREMENT, BT_GATT_CHRC_NOTIFY,
 											  BT_GATT_PERM_NONE, NULL, NULL, NULL),
-					   BT_GATT_CCC(hrmc_ccc_cfg_changed,
+					   BT_GATT_CCC(cps_ccc_cfg_changed,
 								   CPS_GATT_PERM_DEFAULT),
 					   BT_GATT_CHARACTERISTIC(BT_UUID_SENSOR_LOCATION, BT_GATT_CHRC_READ,
 											  CPS_GATT_PERM_DEFAULT &GATT_PERM_READ_MASK,
@@ -216,32 +216,57 @@ int bt_cps_cb_unregister(struct bt_cps_cb *cb)
 	return 0;
 }
 
-int bt_cps_notify(uint16_t power_watts, uint16_t crank_revolutions, uint16_t crank_event_time)
+int bt_cps_notify(int16_t power_watts, uint16_t crank_revolutions, uint16_t crank_event_time)
 {
+	// int rc;
+	// static uint8_t cps_meas[9]; /* Flags (2) + Power (2) + Crank Rev (2) + Crank Time (2) + Pedal Balance (1) */
+	// uint8_t *pos = cps_meas;
+
+	// /* Flags (16-bit, little-endian): 0x0021 = Pedal Power Balance + Crank Revolution Data Present */
+	// sys_put_le16(0x0021, pos);
+	// pos += 2;
+
+	// /* Instantaneous Power (16-bit, little-endian) */
+	// sys_put_le16(power_watts, pos);
+	// pos += 2;
+
+	// /* Crank Revolutions (16-bit, little-endian) */
+	// sys_put_le16(crank_revolutions, pos);
+	// pos += 2;
+
+	// /* Crank Event Time (16-bit, little-endian, units of 1/1024 second) */
+	// sys_put_le16(crank_event_time, pos);
+	// pos += 2;
+
+	// /* Pedal Power Balance (8-bit): 128 = 50/50 split between left/right */
+	// *pos++ = 128;
+
+	// rc = bt_gatt_notify(NULL, &cps_svc.attrs[1], &cps_meas, sizeof(cps_meas));
+
+	// return rc == -ENOTCONN ? 0 : rc;
+
 	int rc;
-	static uint8_t cps_meas[9]; /* Flags (2) + Power (2) + Crank Rev (2) + Crank Time (2) + Pedal Balance (1) */
+	uint8_t cps_meas[8]; /* Flags (2) + Power (2) + Crank Rev (2) + Crank Time (2) */
 	uint8_t *pos = cps_meas;
 
-	/* Flags (16-bit, little-endian): 0x0021 = Pedal Power Balance + Crank Revolution Data Present */
-	sys_put_le16(0x0021, pos);
-	pos += 2;
+	/* Flags: Crank Revolution Data Present */
+	sys_put_le16(0x0020, pos);
+	pos += sizeof(uint16_t);
 
-	/* Instantaneous Power (16-bit, little-endian) */
-	sys_put_le16(power_watts, pos);
-	pos += 2;
+	/* Instantaneous Power: sint16, watts */
+	sys_put_le16((uint16_t)power_watts, pos);
+	pos += sizeof(int16_t);
 
-	/* Crank Revolutions (16-bit, little-endian) */
+	// *pos++ = 100; /* 50.0% if using 0.5% units */
+
+	/* Cumulative Crank Revolutions: uint16 */
 	sys_put_le16(crank_revolutions, pos);
-	pos += 2;
+	pos += sizeof(uint16_t);
 
-	/* Crank Event Time (16-bit, little-endian, units of 1/1024 second) */
-	sys_put_le16(crank_event_time, pos);
-	pos += 2;
+	/* Cumulative Crank Revolution Time: uint16_t */
+	sys_put_le16((uint16_t)crank_event_time, pos);
 
-	/* Pedal Power Balance (8-bit): 128 = 50/50 split between left/right */
-	*pos++ = 128;
-
-	rc = bt_gatt_notify(NULL, &cps_svc.attrs[1], &cps_meas, sizeof(cps_meas));
+	rc = bt_gatt_notify(NULL, &cps_svc.attrs[2], cps_meas, sizeof(cps_meas));
 
 	return rc == -ENOTCONN ? 0 : rc;
 }

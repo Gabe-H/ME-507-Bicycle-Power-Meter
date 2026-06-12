@@ -55,10 +55,9 @@ LOG_MODULE_REGISTER(cscs);
 #define CONFIG_BT_CSCS_DEFAULT_PERM_RW 0
 #endif
 
-#define CSCS_GATT_PERM_DEFAULT ( \
-	CONFIG_BT_CSCS_DEFAULT_PERM_RW_AUTHEN ? (BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_WRITE_AUTHEN) : \
-	CONFIG_BT_CSCS_DEFAULT_PERM_RW_ENCRYPT ? (BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT) : \
-	(BT_GATT_PERM_READ | BT_GATT_PERM_WRITE))
+#define CSCS_GATT_PERM_DEFAULT (                                                                                                                                                                       \
+    CONFIG_BT_CSCS_DEFAULT_PERM_RW_AUTHEN ? (BT_GATT_PERM_READ_AUTHEN | BT_GATT_PERM_WRITE_AUTHEN) : CONFIG_BT_CSCS_DEFAULT_PERM_RW_ENCRYPT ? (BT_GATT_PERM_READ_ENCRYPT | BT_GATT_PERM_WRITE_ENCRYPT) \
+                                                                                                                                            : (BT_GATT_PERM_READ | BT_GATT_PERM_WRITE))
 
 static uint8_t cscs_sensor_location = 0x01; /* Sensor location: 0x01 = crank */
 static uint16_t cscs_feature = 0x0002;      /* Feature flags: crank revolution data supported */
@@ -149,7 +148,7 @@ int bt_cscs_cb_unregister(struct bt_cscs_cb *cb)
 int bt_cscs_notify(uint16_t crank_revolutions, uint16_t crank_event_time)
 {
     int rc;
-    static uint8_t cscs_meas[5]; /* Flags (1) + Crank Rev (2) + Crank Time (2) */
+    uint8_t cscs_meas[5]; /* Flags (1) + Crank Rev (2) + Crank Time (2) */
     uint8_t *pos = cscs_meas;
 
     /* Flags (8-bit): 0x02 = Crank Revolution Data Present */
@@ -157,13 +156,14 @@ int bt_cscs_notify(uint16_t crank_revolutions, uint16_t crank_event_time)
 
     /* Crank Revolutions (16-bit, little-endian) */
     sys_put_le16(crank_revolutions, pos);
-    pos += 2;
+    pos += sizeof(uint16_t);
 
     /* Crank Event Time (16-bit, little-endian, units of 1/1024 second) */
     sys_put_le16(crank_event_time, pos);
-    pos += 2;
+    pos += sizeof(uint16_t);
 
-    rc = bt_gatt_notify(NULL, &cscs_svc.attrs[1], &cscs_meas, sizeof(cscs_meas));
+    rc = bt_gatt_notify(NULL, &cscs_svc.attrs[2], cscs_meas, sizeof(cscs_meas));
+    // rc = bt_gatt_notify(NULL, &cscs_svc.attrs[2], cscs_meas, sizeof(cscs_meas));
 
     return rc == -ENOTCONN ? 0 : rc;
 }

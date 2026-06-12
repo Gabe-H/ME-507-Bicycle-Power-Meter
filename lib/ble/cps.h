@@ -110,7 +110,7 @@ extern "C"
 	 *
 	 *  @return Zero in case of success and error code in case of error.
 	 */
-	int bt_cps_notify(uint16_t power_watts, uint16_t crank_revolutions, uint16_t crank_event_time);
+	int bt_cps_notify(int16_t power_watts, uint16_t crank_revolutions, uint16_t crank_event_time);
 
 #ifdef __cplusplus
 }
