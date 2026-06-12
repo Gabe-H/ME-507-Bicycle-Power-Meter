@@ -1,5 +1,9 @@
 name: Build and deploy Doxygen docs
 
+run: |
+  mkdir -p build/docs
+  doxygen Doxyfile
+
 on:
   push:
     branches: [main]
