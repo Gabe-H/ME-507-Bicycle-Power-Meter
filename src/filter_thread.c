@@ -1,3 +1,13 @@
+/**
+ * @file filter_thread.c
+ * @brief Thread that fuses accelerometer and gyro data using an
+ * extended Kalman filter with a spinning crank model.
+ * @version 0.1
+ * @date 2026-06-11
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "filter_thread.h"
 
 LOG_MODULE_REGISTER(ekf, LOG_LEVEL_WRN);

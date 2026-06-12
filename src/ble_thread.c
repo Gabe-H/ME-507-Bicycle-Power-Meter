@@ -1,3 +1,13 @@
+/**
+ * @file ble_thread.c
+ * @brief File containing BLE peripheral configuration for Cycling Power Service (CPS), Cycling Speed and Cadence Service (CSCS)
+ * and (while debugging only) NUS for Bluetooth data sharing.
+ * @version 0.1
+ * @date 2026-06-11
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "ble_thread.h"
 
 // LOG_MODULE_REGISTER(ble, LOG_LEVEL_DBG);
@@ -16,6 +26,11 @@ K_MEM_SLAB_DEFINE(ble_data_slab,
 
 K_EVENT_DEFINE(device_connected_event);
 
+/**
+ * @brief Handles BLE advertising
+ *
+ * @param work
+ */
 static void adv_work_handler(struct k_work *work)
 {
     int err = bt_le_adv_start(BT_LE_ADV_CONN_FAST_2, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
@@ -29,11 +44,21 @@ static void adv_work_handler(struct k_work *work)
     LOG_INF("Advertising successfully started\n");
 }
 
+/**
+ * @brief Begin BLE advertising after GATT and characteristics configured
+ *
+ */
 static void advertising_start(void)
 {
     k_work_submit(&adv_work);
 }
 
+/**
+ * @brief Callback function that gets called when a host connects to this device
+ *
+ * @param conn
+ * @param conn_err
+ */
 static void connected(struct bt_conn *conn, uint8_t conn_err)
 {
     char addr[BT_ADDR_LE_STR_LEN];
@@ -53,6 +78,12 @@ static void connected(struct bt_conn *conn, uint8_t conn_err)
     LOG_INF("Peripheral connected: %s\n", addr);
 }
 
+/**
+ * @brief Callback function that gets called when a host disconnects to this device
+ *
+ * @param conn
+ * @param reason
+ */
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
     char addr[BT_ADDR_LE_STR_LEN];
@@ -65,12 +96,20 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
     LOG_INF("Disconnected: %s, reason 0x%02x %s\n", addr, reason, bt_hci_err_to_str(reason));
 }
 
+/**
+ * @brief Callback that handles connection recycling
+ *
+ */
 static void recycled_cb(void)
 {
     LOG_DBG("Connection object recycled, restarting advertising\n");
     advertising_start();
 }
 
+/**
+ * @brief Thread that handles all CPS and CSCS notifications. Dependent on thread in `power_meas.c`
+ *
+ */
 static void cps_notify_thread(void)
 {
     // uint16_t power_watts = 150U;     /* Start at 150W */
@@ -152,37 +191,34 @@ static void cps_notify_thread(void)
 K_THREAD_DEFINE(cps_notify_thread_id, STACKSIZE, cps_notify_thread,
                 NULL, NULL, NULL, 3, 0, 0); // Lowest priority in power calculation chain
 
+/**
+ *  TODO: Cleanup NUS debugging
+ */
 #if IS_ENABLED(CONFIG_NUS_DEBUG_BUILD)
 static void nus_thread(void)
 {
+    return;
     // char buf[] = "Hello, world!";
     // char buf[50];
-    while (1)
-    {
-        // struct filter_data_t *data = k_fifo_peek_head(&filter_fifo);
-        // if (data)
-        // {
-        //     sprintf(buf, "Omega: %03.2f, Theta: %03.2f", data->omega, data->theta);
-        // }
+    // while (1)
+    // {
+    // struct filter_data_t *data = k_fifo_peek_head(&filter_fifo);
+    // if (data)
+    // {
+    //     sprintf(buf, "Omega: %03.2f, Theta: %03.2f", data->omega, data->theta);
+    // }
 
-        // int err = bt_nus_send(NULL, &buf, 29);
-        // if (err < 0 && (err != -EAGAIN) && (err != -ENOTCONN))
-        // {
-        //     return;
-        // }
+    // int err = bt_nus_send(NULL, &buf, 29);
+    // if (err < 0 && (err != -EAGAIN) && (err != -ENOTCONN))
+    // {
+    //     return;
+    // }
 
-        k_sleep(K_MSEC(50));
-    }
+    //     k_sleep(K_MSEC(50));
+    // }
 }
 
 K_THREAD_DEFINE(nus_thread_id, STACKSIZE, nus_thread,
                 NULL, NULL, NULL, 0, 0, 0); // Very low priority - just logging
 
-// static int cmd_pm_status(const struct shell *sh, size_t argc, char **argv)
-// {
-//     shell_print(sh, "NUS debug build is active");
-//     return 0;
-// }
-
-// SHELL_CMD_REGISTER(pm_status, NULL, "Print power meter debug status", cmd_pm_status);
 #endif

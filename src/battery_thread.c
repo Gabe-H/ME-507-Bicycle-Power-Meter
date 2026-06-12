@@ -1,3 +1,12 @@
+/**
+ * @file battery_thread.c
+ * @brief File containing thread configuration for battery monitoring
+ * @version 0.1
+ * @date 2026-06-11
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "battery_thread.h"
 
 LOG_MODULE_REGISTER(batt, LOG_LEVEL_INF);

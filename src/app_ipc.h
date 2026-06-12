@@ -83,16 +83,64 @@ struct filter_data_t
     int64_t ts;                // Uptime timestamps [ms]
 };
 
+/**
+ * @brief Event with mask to sync thread startup process
+ *
+ */
 extern struct k_event thread_sync_event;
-extern struct k_fifo imu_fifo;
-extern struct k_mem_slab imu_data_slab;
-extern struct k_fifo ble_fifo;
-extern struct k_mem_slab ble_data_slab;
-extern struct k_fifo filter_fifo;
-extern struct k_mem_slab filter_data_slab;
-extern struct k_fifo printk_fifo;
 
+/**
+ * @brief FIFO buffer of pointers to `imu_data_t` data packets
+ * stored on `imu_data_slab`
+ *
+ */
+extern struct k_fifo imu_fifo;
+
+/**
+ * @brief Zephyr-based memory management for IMU data
+ *
+ */
+extern struct k_mem_slab imu_data_slab;
+
+/**
+ * @brief FIFO buffer of pointers to `ble_data_t` data packets
+ * stored on `ble_data_slab`
+ *
+ */
+extern struct k_fifo ble_fifo;
+
+/**
+ * @brief Zephyr-based memory management for cycling data to be sent over BLE
+ *
+ */
+extern struct k_mem_slab ble_data_slab;
+
+/**
+ * @brief FIFO buffer of pointers to `filter_data_t` data packets
+ * stored on `filter_data_slab`
+ *
+ */
+extern struct k_fifo filter_fifo;
+
+/**
+ * @brief Zephyr-based memory management for IMU data
+ *
+ */
+extern struct k_mem_slab filter_data_slab;
+
+/**
+ * @brief Mutex for axis (Strain gauge ADC) value sharing
+ * so that no task is reading the value while another is
+ * writing to it
+ *
+ */
 extern struct k_mutex axis_latest_lock;
+
+/**
+ * @brief Shared strain gauge ADC value. Take `axis_latest_lock` mutex
+ * before accessing.
+ *
+ */
 extern int32_t axis_latest_value;
 
 #endif /* APP_IPC_H */

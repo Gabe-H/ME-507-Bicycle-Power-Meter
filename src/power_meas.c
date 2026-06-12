@@ -1,3 +1,13 @@
+/**
+ * @file power_meas.c
+ * @brief Thread that calculates total power on the crank by averages torque and speed measurements.
+ * Sends data to memory slab for BLE thread to receive and send to BLE computer
+ * @version 0.1
+ * @date 2026-06-11
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "power_meas.h"
 
 /** Logger configuration **/

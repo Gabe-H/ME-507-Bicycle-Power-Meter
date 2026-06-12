@@ -1,3 +1,12 @@
+/**
+ * @file imu_thread.c
+ * @brief Configuration for thread that initializes and reads from IMU (accel and gyro)
+ * @version 0.1
+ * @date 2026-06-11
+ *
+ * @copyright Copyright (c) 2026
+ *
+ */
 #include "imu_thread.h"
 
 /** Logger configuration **/
