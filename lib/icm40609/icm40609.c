@@ -12,7 +12,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
-LOG_MODULE_REGISTER(icm, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(icm, LOG_LEVEL_WRN);
 
 /**
  * @brief Initialize the IMU.
@@ -39,7 +39,7 @@ int icm_init(icm_t *icm)
         return 1;
     }
 
-    LOG_INF("I2C bus ready, target address: 0x%02x", icm->addr);
+    LOG_DBG("I2C bus ready, target address: 0x%02x", icm->addr);
 
     /* Optional: give the sensor time after power-up */
     k_msleep(50);
@@ -51,7 +51,7 @@ int icm_init(icm_t *icm)
         return 2;
     }
 
-    LOG_INF("WHO_AM_I = 0x%02x (expect 0x%02x)", whoami, ICM40609_WHO_AM_I_VAL);
+    LOG_DBG("WHO_AM_I = 0x%02x (expect 0x%02x)", whoami, ICM40609_WHO_AM_I_VAL);
 
     if (whoami == ICM40609_WHO_AM_I_VAL)
     {
