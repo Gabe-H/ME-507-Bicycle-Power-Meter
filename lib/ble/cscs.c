@@ -1,5 +1,5 @@
 /** @file
- *  @brief CSCS Service implementation
+ *  @brief BLE CSCS Service implementation based on Zephyr's HRS sample
  */
 
 /*

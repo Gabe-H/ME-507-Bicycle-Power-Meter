@@ -1,5 +1,5 @@
 /** @file
- *  @brief CPS Service sample
+ *  @brief BLE CPS Service created based on Zephyr's HRS sample
  */
 
 /*
